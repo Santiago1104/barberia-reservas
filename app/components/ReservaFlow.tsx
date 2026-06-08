@@ -173,12 +173,12 @@ export default function ReservaFlow({
             Tu cita con <strong className="text-white">{barberoElegido?.nombre}</strong> quedó agendada para el {diaElegido} a las {hora12(horaElegida!)}.
           </p>
           <p className="text-neutral-400 text-sm mb-6">Servicio: {servicioElegido?.nombre}</p>
-          <p className="text-neutral-300 text-sm mb-2">Enviamos los detalles a tu correo. Si necesitas cancelar:</p>
-          
+         <p className="text-neutral-300 text-sm mb-6">Enviamos los detalles a tu correo electrónico.</p>
+          <a
             href={urlCancelar}
-            className="text-amber-400 text-sm break-all hover:underline"
-          <a>
-            {urlCancelar}
+            className="inline-block w-full py-4 rounded-xl border border-red-500 text-red-400 font-bold uppercase tracking-wide hover:bg-red-500 hover:text-white transition"
+          >
+            Cancelar mi cita
           </a>
         </div>
       </main>
@@ -186,7 +186,7 @@ export default function ReservaFlow({
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
+    <main className="bg-neutral-950 text-white py-10 px-4">
       <div className="max-w-xl mx-auto">
         <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mb-8 text-center">
           Reserva tu cita
@@ -209,11 +209,11 @@ export default function ReservaFlow({
                 }`}
               >
                 {b.foto_url ? (
-                  <img src={b.foto_url} alt={b.nombre} className="w-14 h-14 rounded-full object-cover shrink-0" />
+                  <img src={b.foto_url} alt={b.nombre} className="w-14 h-14 rounded-full object-cover shrink-0 pointer-events-none" />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-neutral-700 shrink-0" />
+                  <div className="w-14 h-14 rounded-full bg-neutral-700 shrink-0 pointer-events-none" />
                 )}
-                <div>
+                <div className="pointer-events-none">
                   <div className="font-bold">{b.nombre}</div>
                   {b.descripcion && <div className="text-sm text-neutral-400">{b.descripcion}</div>}
                 </div>
