@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
+import { enviarConfirmacion } from '@/lib/email';
 
 const supabase = supabaseAdmin;
 
@@ -76,6 +77,19 @@ export async function POST(request: Request) {
       `Tel: ${telefono_cliente}`;
 
     await notificarWhatsApp(mensaje);
+    await notificarWhatsApp(mensaje);
+
+    // 2b. Enviar confirmación por correo al cliente (best-effort)
+    const urlBase = new URL(request.url).origin;
+    await enviarConfirmacion({
+      emailCliente: email_cliente,
+      nombreCliente: nombre_cliente,
+      barbero: barbero_nombre,
+      servicio: servicio_nombre,
+      fecha,
+      hora,
+      urlCancelar: `${urlBase}/cancelar/${data.cancel_token}`,
+    });
 
     // 3. Devolver el token al navegador
     return NextResponse.json({ cancel_token: data.cancel_token });

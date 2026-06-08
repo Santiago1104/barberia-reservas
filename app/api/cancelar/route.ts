@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
+import { enviarCancelacion } from '@/lib/email';
 
 const supabase = supabaseAdmin;
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     const { data: cita, error: errBuscar } = await supabase
       .from('appointments')
       .select(
-        'id, fecha, hora, estado, nombre_cliente, barbers(nombre), services(nombre)'
+        'id, fecha, hora, estado, nombre_cliente, email_cliente, barbers(nombre), services(nombre)'
       )
       .eq('cancel_token', token)
       .single();
@@ -74,6 +75,14 @@ const barbero =
       `Servicio: ${servicio}\n` +
       `Era: ${cita.fecha} a las ${cita.hora.slice(0, 5)}`;
     await notificarWhatsApp(mensaje);
+
+    // Avisar al cliente por correo (best-effort)
+    await enviarCancelacion({
+      emailCliente: cita.email_cliente,
+      nombreCliente: cita.nombre_cliente,
+      fecha: cita.fecha,
+      hora: cita.hora.slice(0, 5),
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
