@@ -17,7 +17,6 @@ type Service = {
   precio: number;
 };
 
-// Horario de atención fijo (slots de 1 hora)
 const HORARIO = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
 
 function generarDias(): Date[] {
@@ -60,15 +59,23 @@ export default function ReservaFlow({
   const [horasOcupadas, setHorasOcupadas] = useState<string[]>([]);
   const [cargandoHoras, setCargandoHoras] = useState(false);
 
+  // Datos del formulario
+  const [nombre, setNombre] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [email, setEmail] = useState('');
+
+  // Estado del guardado
+  const [guardando, setGuardando] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+  const [reservaHecha, setReservaHecha] = useState<{ cancelToken: string } | null>(null);
+
   const dias = generarDias();
 
-  // Consulta las horas ya ocupadas cada vez que cambia el barbero o el día
   useEffect(() => {
     async function cargarHorasOcupadas() {
       if (!barberoElegido || !diaElegido) return;
-
       setCargandoHoras(true);
-      setHoraElegida(null); // resetea la hora si cambia barbero/día
+      setHoraElegida(null);
 
       const { data } = await supabase
         .from('appointments')
@@ -77,23 +84,18 @@ export default function ReservaFlow({
         .eq('fecha', diaElegido)
         .eq('estado', 'confirmada');
 
-      // Las horas vienen como "09:00:00", las recortamos a "09:00"
       const ocupadas = (data ?? []).map((c) => c.hora.slice(0, 5));
       setHorasOcupadas(ocupadas);
       setCargandoHoras(false);
     }
-
     cargarHorasOcupadas();
   }, [barberoElegido, diaElegido]);
 
-  // Calcula qué horas mostrar: las del horario, menos ocupadas, menos las que ya pasaron si es hoy
   const hoyTexto = aTextoFecha(new Date());
   const ahora = new Date();
 
   const horasLibres = HORARIO.filter((hora) => {
     if (horasOcupadas.includes(hora)) return false;
-
-    // Si el día elegido es hoy, ocultar horas que ya pasaron
     if (diaElegido === hoyTexto) {
       const [h, m] = hora.split(':').map(Number);
       const horaSlot = new Date();
@@ -103,11 +105,93 @@ export default function ReservaFlow({
     return true;
   });
 
+  // Validación simple de email
+  function emailValido(correo: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
+  }
+
+  const formularioCompleto =
+    nombre.trim() !== '' &&
+    telefono.trim() !== '' &&
+    email.trim() !== '' &&
+    emailValido(email);
+
+async function confirmarReserva() {
+    if (!barberoElegido || !servicioElegido || !diaElegido || !horaElegida) return;
+
+    setGuardando(true);
+    setErrorGuardado(null);
+
+    try {
+      const res = await fetch('/api/reservas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          barber_id: barberoElegido.id,
+          service_id: servicioElegido.id,
+          fecha: diaElegido,
+          hora: horaElegida,
+          nombre_cliente: nombre.trim(),
+          telefono_cliente: telefono.trim(),
+          email_cliente: email.trim(),
+          barbero_nombre: barberoElegido.nombre,
+          servicio_nombre: servicioElegido.nombre,
+        }),
+      });
+
+      const resultado = await res.json();
+
+      setGuardando(false);
+
+      if (!res.ok) {
+        if (resultado.error === 'slot_ocupado') {
+          setErrorGuardado(
+            'Esa hora acaba de ser reservada por alguien más. Por favor elige otra.'
+          );
+          setHorasOcupadas((prev) => [...prev, horaElegida]);
+          setHoraElegida(null);
+        } else {
+          setErrorGuardado('Ocurrió un error al guardar. Intenta de nuevo.');
+        }
+        return;
+      }
+
+      setReservaHecha({ cancelToken: resultado.cancel_token });
+    } catch {
+      setGuardando(false);
+      setErrorGuardado('No se pudo conectar. Revisa tu internet e intenta de nuevo.');
+    }
+  }
+
+  // PANTALLA DE CONFIRMACIÓN
+  if (reservaHecha) {
+    const urlCancelar = `${window.location.origin}/cancelar/${reservaHecha.cancelToken}`;
+    return (
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: 20, color: '#1F3864' }}>
+        <h1>¡Reserva confirmada!</h1>
+        <p>
+          Tu cita con <strong>{barberoElegido?.nombre}</strong> quedó agendada para el{' '}
+          {diaElegido} a las {horaElegida}.
+        </p>
+        <p>Servicio: {servicioElegido?.nombre}</p>
+        <p style={{ marginTop: 16 }}>
+          Si necesitas cancelar, usa este enlace:
+        </p>
+        <p>
+          <a href={urlCancelar}>{urlCancelar}</a>
+        </p>
+        <p style={{ color: '#888', fontSize: 14 }}>
+          (Pronto enviaremos esta confirmación a tu correo.)
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 20 }}>
       <h1>Reserva tu cita</h1>
 
-      {/* PASO 1: elegir barbero */}
+      {/* PASO 1: barbero */}
       <section>
         <h2>1. Elige tu barbero</h2>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -118,10 +202,7 @@ export default function ReservaFlow({
               style={{
                 padding: '16px 24px',
                 borderRadius: 8,
-                border:
-                  barberoElegido?.id === b.id
-                    ? '2px solid #1F3864'
-                    : '1px solid #ccc',
+                border: barberoElegido?.id === b.id ? '2px solid #1F3864' : '1px solid #ccc',
                 background: barberoElegido?.id === b.id ? '#e8eef7' : '#fff',
                 color: '#1F3864',
                 cursor: 'pointer',
@@ -134,7 +215,7 @@ export default function ReservaFlow({
         </div>
       </section>
 
-      {/* PASO 2: elegir servicio */}
+      {/* PASO 2: servicio */}
       {barberoElegido && (
         <section style={{ marginTop: 24 }}>
           <h2>2. Elige el servicio</h2>
@@ -146,10 +227,7 @@ export default function ReservaFlow({
                 style={{
                   padding: 16,
                   borderRadius: 8,
-                  border:
-                    servicioElegido?.id === s.id
-                      ? '2px solid #1F3864'
-                      : '1px solid #ccc',
+                  border: servicioElegido?.id === s.id ? '2px solid #1F3864' : '1px solid #ccc',
                   background: servicioElegido?.id === s.id ? '#e8eef7' : '#fff',
                   color: '#1F3864',
                   cursor: 'pointer',
@@ -160,16 +238,14 @@ export default function ReservaFlow({
                 {s.descripcion && (
                   <div style={{ fontSize: 14, color: '#555' }}>{s.descripcion}</div>
                 )}
-                <div style={{ marginTop: 4 }}>
-                  ${s.precio.toLocaleString('es-CO')}
-                </div>
+                <div style={{ marginTop: 4 }}>${s.precio.toLocaleString('es-CO')}</div>
               </button>
             ))}
           </div>
         </section>
       )}
 
-      {/* PASO 3: elegir día */}
+      {/* PASO 3: día */}
       {servicioElegido && (
         <section style={{ marginTop: 24 }}>
           <h2>3. Elige el día</h2>
@@ -183,8 +259,7 @@ export default function ReservaFlow({
                   style={{
                     padding: '16px 20px',
                     borderRadius: 8,
-                    border:
-                      diaElegido === valor ? '2px solid #1F3864' : '1px solid #ccc',
+                    border: diaElegido === valor ? '2px solid #1F3864' : '1px solid #ccc',
                     background: diaElegido === valor ? '#e8eef7' : '#fff',
                     color: '#1F3864',
                     cursor: 'pointer',
@@ -199,7 +274,7 @@ export default function ReservaFlow({
         </section>
       )}
 
-      {/* PASO 4: elegir hora */}
+      {/* PASO 4: hora */}
       {diaElegido && (
         <section style={{ marginTop: 24 }}>
           <h2>4. Elige la hora</h2>
@@ -216,8 +291,7 @@ export default function ReservaFlow({
                   style={{
                     padding: '14px 20px',
                     borderRadius: 8,
-                    border:
-                      horaElegida === hora ? '2px solid #1F3864' : '1px solid #ccc',
+                    border: horaElegida === hora ? '2px solid #1F3864' : '1px solid #ccc',
                     background: horaElegida === hora ? '#e8eef7' : '#fff',
                     color: '#1F3864',
                     cursor: 'pointer',
@@ -231,16 +305,63 @@ export default function ReservaFlow({
         </section>
       )}
 
-      {/* PASO 5: resumen (siguiente: confirmar) */}
+      {/* PASO 5: formulario y confirmar */}
       {horaElegida && (
-        <section style={{ marginTop: 24 }}>
-          <h2>5. Confirma tu reserva</h2>
+        <section style={{ marginTop: 24, color: '#1F3864' }}>
+          <h2>5. Tus datos</h2>
           <p>
-            <strong>{barberoElegido?.nombre}</strong> — {servicioElegido?.nombre} (
-            ${servicioElegido?.precio.toLocaleString('es-CO')})<br />
+            <strong>{barberoElegido?.nombre}</strong> — {servicioElegido?.nombre} ($
+            {servicioElegido?.precio.toLocaleString('es-CO')})<br />
             {diaElegido} a las {horaElegida}
           </p>
-          <p style={{ color: '#888' }}>(Aquí irá el formulario de datos, siguiente paso)</p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+            <input
+              placeholder="Nombre completo"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
+            />
+            <input
+              placeholder="Teléfono"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
+            />
+            <input
+              placeholder="Correo electrónico"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
+            />
+          </div>
+
+          {email.trim() !== '' && !emailValido(email) && (
+            <p style={{ color: '#c0392b', fontSize: 14 }}>
+              El correo no parece válido.
+            </p>
+          )}
+
+          {errorGuardado && (
+            <p style={{ color: '#c0392b', marginTop: 8 }}>{errorGuardado}</p>
+          )}
+
+          <button
+            onClick={confirmarReserva}
+            disabled={!formularioCompleto || guardando}
+            style={{
+              marginTop: 16,
+              padding: '14px 24px',
+              borderRadius: 8,
+              border: 'none',
+              background: formularioCompleto && !guardando ? '#1F3864' : '#aaa',
+              color: '#fff',
+              cursor: formularioCompleto && !guardando ? 'pointer' : 'not-allowed',
+              fontSize: 16,
+            }}
+          >
+            {guardando ? 'Guardando...' : 'Confirmar reserva'}
+          </button>
         </section>
       )}
     </div>
