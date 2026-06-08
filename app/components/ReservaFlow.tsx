@@ -79,15 +79,15 @@ export default function ReservaFlow({
       setCargandoHoras(true);
       setHoraElegida(null);
 
-      const { data } = await supabase
-        .from('appointments')
-        .select('hora')
-        .eq('barber_id', barberoElegido.id)
-        .eq('fecha', diaElegido)
-        .eq('estado', 'confirmada');
-
-      const ocupadas = (data ?? []).map((c) => c.hora.slice(0, 5));
-      setHorasOcupadas(ocupadas);
+      try {
+        const res = await fetch(
+          `/api/disponibilidad?barber_id=${barberoElegido.id}&fecha=${diaElegido}`
+        );
+        const data = await res.json();
+        setHorasOcupadas(data.horasOcupadas ?? []);
+      } catch {
+        setHorasOcupadas([]);
+      }
       setCargandoHoras(false);
     }
     cargarHorasOcupadas();
@@ -173,7 +173,7 @@ async function confirmarReserva() {
         <h1>¡Reserva confirmada!</h1>
         <p>
           Tu cita con <strong>{barberoElegido?.nombre}</strong> quedó agendada para el{' '}
-          {diaElegido} a las {horaElegida}.
+          {diaElegido} a las {hora12(horaElegida!)}.
         </p>
         <p>Servicio: {servicioElegido?.nombre}</p>
         <p style={{ marginTop: 16 }}>
@@ -340,7 +340,7 @@ async function confirmarReserva() {
           <p>
             <strong>{barberoElegido?.nombre}</strong> — {servicioElegido?.nombre} ($
             {servicioElegido?.precio.toLocaleString('es-CO')})<br />
-            {diaElegido} a las {horaElegida}
+            {diaElegido} a las {hora12(horaElegida)}
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>

@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = supabaseAdmin;
 
 async function notificarWhatsApp(mensaje: string) {
   const phone = process.env.CALLMEBOT_PHONE;
@@ -66,8 +63,10 @@ export async function POST(request: Request) {
     }
 
     // 5. Avisar al dueño
-    const barbero = (cita.barbers as { nombre: string } | null)?.nombre ?? '—';
-    const servicio = (cita.services as { nombre: string } | null)?.nombre ?? '—';
+const barbero =
+      (cita.barbers as unknown as { nombre: string } | null)?.nombre ?? '—';
+    const servicio =
+      (cita.services as unknown as { nombre: string } | null)?.nombre ?? '—';
     const mensaje =
       `Reserva CANCELADA\n` +
       `Cliente: ${cita.nombre_cliente}\n` +

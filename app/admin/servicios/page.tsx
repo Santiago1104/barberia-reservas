@@ -19,6 +19,7 @@ export default function ServiciosPage() {
   const [precio, setPrecio] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
 
   const supabase = crearClienteNavegador();
 
@@ -57,6 +58,7 @@ export default function ServiciosPage() {
     setNombre('');
     setDescripcion('');
     setPrecio('');
+    setMostrarForm(false);
     cargarServicios();
   }
 
@@ -81,6 +83,25 @@ export default function ServiciosPage() {
       </Link>
       <h1>Servicios</h1>
 
+      {!mostrarForm && (
+        <button
+          onClick={() => setMostrarForm(true)}
+          style={{
+            marginTop: 16,
+            padding: '12px 20px',
+            borderRadius: 8,
+            border: '1px solid #1F3864',
+            background: '#fff',
+            color: '#1F3864',
+            cursor: 'pointer',
+          }}
+        >
+          + Nuevo servicio
+        </button>
+      )}
+
+      {mostrarForm && (
+      <>
       {/* Crear */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
         <input
@@ -117,7 +138,9 @@ export default function ServiciosPage() {
           {cargando ? 'Agregando...' : 'Agregar servicio'}
         </button>
       </div>
-      {error && <p style={{ color: '#c0392b' }}>{error}</p>}
+{error && <p style={{ color: '#c0392b' }}>{error}</p>}
+      </>
+      )}
 
       {/* Lista */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 24 }}>

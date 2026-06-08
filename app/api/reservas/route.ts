@@ -1,11 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 
-// Cliente de Supabase para el servidor
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = supabaseAdmin;
 
 // Envía el mensaje de WhatsApp al dueño vía CallMeBot
 async function notificarWhatsApp(mensaje: string) {

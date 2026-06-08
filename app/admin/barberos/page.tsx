@@ -19,6 +19,7 @@ export default function BarberosPage() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
 
   const supabase = crearClienteNavegador();
 
@@ -80,6 +81,7 @@ export default function BarberosPage() {
     setNombre('');
     setDescripcion('');
     setArchivo(null);
+    setMostrarForm(false);
     cargarBarberos();
   }
 
@@ -104,6 +106,25 @@ export default function BarberosPage() {
       </Link>
       <h1>Barberos</h1>
 
+{!mostrarForm && (
+        <button
+          onClick={() => setMostrarForm(true)}
+          style={{
+            marginTop: 16,
+            padding: '12px 20px',
+            borderRadius: 8,
+            border: '1px solid #1F3864',
+            background: '#fff',
+            color: '#1F3864',
+            cursor: 'pointer',
+          }}
+        >
+          + Nuevo barbero
+        </button>
+      )}
+
+      {mostrarForm && (
+      <>
       {/* Crear */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
         <input
@@ -143,7 +164,9 @@ export default function BarberosPage() {
           {cargando ? 'Guardando...' : 'Agregar barbero'}
         </button>
       </div>
-      {error && <p style={{ color: '#c0392b' }}>{error}</p>}
+{error && <p style={{ color: '#c0392b' }}>{error}</p>}
+      </>
+      )}
 
       {/* Lista */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 24 }}>
