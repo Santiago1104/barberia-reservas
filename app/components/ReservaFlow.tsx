@@ -61,12 +61,10 @@ export default function ReservaFlow({
   const [horasOcupadas, setHorasOcupadas] = useState<string[]>([]);
   const [cargandoHoras, setCargandoHoras] = useState(false);
 
-  // Datos del formulario
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
 
-  // Estado del guardado
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const [reservaHecha, setReservaHecha] = useState<{ cancelToken: string } | null>(null);
@@ -107,7 +105,6 @@ export default function ReservaFlow({
     return true;
   });
 
-  // Validación simple de email
   function emailValido(correo: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
   }
@@ -118,7 +115,7 @@ export default function ReservaFlow({
     email.trim() !== '' &&
     emailValido(email);
 
-async function confirmarReserva() {
+  async function confirmarReserva() {
     if (!barberoElegido || !servicioElegido || !diaElegido || !horaElegida) return;
 
     setGuardando(true);
@@ -142,14 +139,11 @@ async function confirmarReserva() {
       });
 
       const resultado = await res.json();
-
       setGuardando(false);
 
       if (!res.ok) {
         if (resultado.error === 'slot_ocupado') {
-          setErrorGuardado(
-            'Esa hora acaba de ser reservada por alguien más. Por favor elige otra.'
-          );
+          setErrorGuardado('Esa hora acaba de ser reservada por alguien más. Por favor elige otra.');
           setHorasOcupadas((prev) => [...prev, horaElegida]);
           setHoraElegida(null);
         } else {
@@ -169,229 +163,201 @@ async function confirmarReserva() {
   if (reservaHecha) {
     const urlCancelar = `${window.location.origin}/cancelar/${reservaHecha.cancelToken}`;
     return (
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: 20, color: '#1F3864' }}>
-        <h1>¡Reserva confirmada!</h1>
-        <p>
-          Tu cita con <strong>{barberoElegido?.nombre}</strong> quedó agendada para el{' '}
-          {diaElegido} a las {hora12(horaElegida!)}.
-        </p>
-        <p>Servicio: {servicioElegido?.nombre}</p>
-        <p style={{ marginTop: 16 }}>
-          Si necesitas cancelar, usa este enlace:
-        </p>
-        <p>
-          <a href={urlCancelar}>{urlCancelar}</a>
-        </p>
-        <p style={{ color: '#888', fontSize: 14 }}>
-          (Pronto enviaremos esta confirmación a tu correo.)
-        </p>
-      </div>
+      <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-8 text-center">
+          <div className="text-amber-400 text-5xl mb-4">✓</div>
+          <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-2xl font-bold text-amber-400 mb-4">
+            ¡Reserva confirmada!
+          </h1>
+          <p className="text-neutral-300 mb-2">
+            Tu cita con <strong className="text-white">{barberoElegido?.nombre}</strong> quedó agendada para el {diaElegido} a las {hora12(horaElegida!)}.
+          </p>
+          <p className="text-neutral-400 text-sm mb-6">Servicio: {servicioElegido?.nombre}</p>
+          <p className="text-neutral-300 text-sm mb-2">Enviamos los detalles a tu correo. Si necesitas cancelar:</p>
+          
+            href={urlCancelar}
+            className="text-amber-400 text-sm break-all hover:underline"
+          <a>
+            {urlCancelar}
+          </a>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', padding: 20 }}>
-      <h1>Reserva tu cita</h1>
+    <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
+      <div className="max-w-xl mx-auto">
+        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mb-8 text-center">
+          Reserva tu cita
+        </h1>
 
-      {/* PASO 1: barbero */}
-      <section>
-        <h2>1. Elige tu barbero</h2>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {barbers.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setBarberoElegido(b)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: 16,
-                borderRadius: 8,
-                border: barberoElegido?.id === b.id ? '2px solid #1F3864' : '1px solid #ccc',
-                background: barberoElegido?.id === b.id ? '#e8eef7' : '#fff',
-                color: '#1F3864',
-                cursor: 'pointer',
-                textAlign: 'left',
-                width: '100%',
-              }}
-            >
-              {b.foto_url ? (
-                <img
-                  src={b.foto_url}
-                  alt={b.nombre}
-                  style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '50%',
-                    background: '#e8eef7',
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              <div>
-                <div style={{ fontWeight: 'bold', fontSize: 16 }}>{b.nombre}</div>
-                {b.descripcion && (
-                  <div style={{ fontSize: 14, color: '#555' }}>{b.descripcion}</div>
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* PASO 2: servicio */}
-      {barberoElegido && (
-        <section style={{ marginTop: 24 }}>
-          <h2>2. Elige el servicio</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {services.map((s) => (
+        {/* PASO 1: barbero */}
+        <section className="mb-8">
+          <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
+            1. Elige tu barbero
+          </h2>
+          <div className="flex flex-col gap-3">
+            {barbers.map((b) => (
               <button
-                key={s.id}
-                onClick={() => setServicioElegido(s)}
-                style={{
-                  padding: 16,
-                  borderRadius: 8,
-                  border: servicioElegido?.id === s.id ? '2px solid #1F3864' : '1px solid #ccc',
-                  background: servicioElegido?.id === s.id ? '#e8eef7' : '#fff',
-                  color: '#1F3864',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
+                key={b.id}
+                onClick={() => setBarberoElegido(b)}
+                className={`flex items-center gap-4 p-4 rounded-xl border text-left transition w-full ${
+                  barberoElegido?.id === b.id
+                    ? 'border-amber-400 bg-neutral-800'
+                    : 'border-neutral-700 bg-neutral-900 hover:border-neutral-500'
+                }`}
               >
-                <strong>{s.nombre}</strong>
-                {s.descripcion && (
-                  <div style={{ fontSize: 14, color: '#555' }}>{s.descripcion}</div>
+                {b.foto_url ? (
+                  <img src={b.foto_url} alt={b.nombre} className="w-14 h-14 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-neutral-700 shrink-0" />
                 )}
-                <div style={{ marginTop: 4 }}>${s.precio.toLocaleString('es-CO')}</div>
+                <div>
+                  <div className="font-bold">{b.nombre}</div>
+                  {b.descripcion && <div className="text-sm text-neutral-400">{b.descripcion}</div>}
+                </div>
               </button>
             ))}
           </div>
         </section>
-      )}
 
-      {/* PASO 3: día */}
-      {servicioElegido && (
-        <section style={{ marginTop: 24 }}>
-          <h2>3. Elige el día</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {dias.map((d) => {
-              const valor = aTextoFecha(d);
-              return (
+        {/* PASO 2: servicio */}
+        {barberoElegido && (
+          <section className="mb-8">
+            <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
+              2. Elige el servicio
+            </h2>
+            <div className="flex flex-col gap-3">
+              {services.map((s) => (
                 <button
-                  key={valor}
-                  onClick={() => setDiaElegido(valor)}
-                  style={{
-                    padding: '16px 20px',
-                    borderRadius: 8,
-                    border: diaElegido === valor ? '2px solid #1F3864' : '1px solid #ccc',
-                    background: diaElegido === valor ? '#e8eef7' : '#fff',
-                    color: '#1F3864',
-                    cursor: 'pointer',
-                    textTransform: 'capitalize',
-                  }}
+                  key={s.id}
+                  onClick={() => setServicioElegido(s)}
+                  className={`p-4 rounded-xl border text-left transition ${
+                    servicioElegido?.id === s.id
+                      ? 'border-amber-400 bg-neutral-800'
+                      : 'border-neutral-700 bg-neutral-900 hover:border-neutral-500'
+                  }`}
                 >
-                  {aTextoBonito(d)}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* PASO 4: hora */}
-      {diaElegido && (
-        <section style={{ marginTop: 24 }}>
-          <h2>4. Elige la hora</h2>
-          {cargandoHoras ? (
-            <p>Cargando horas disponibles...</p>
-          ) : horasLibres.length === 0 ? (
-            <p>No hay horas disponibles este día. Prueba con otro.</p>
-          ) : (
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              {horasLibres.map((hora) => (
-                <button
-                  key={hora}
-                  onClick={() => setHoraElegida(hora)}
-                  style={{
-                    padding: '14px 20px',
-                    borderRadius: 8,
-                    border: horaElegida === hora ? '2px solid #1F3864' : '1px solid #ccc',
-                    background: horaElegida === hora ? '#e8eef7' : '#fff',
-                    color: '#1F3864',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {hora12(hora)}
+                  <div className="font-bold">{s.nombre}</div>
+                  {s.descripcion && <div className="text-sm text-neutral-400">{s.descripcion}</div>}
+                  <div className="text-amber-400 mt-1">${s.precio.toLocaleString('es-CO')}</div>
                 </button>
               ))}
             </div>
-          )}
-        </section>
-      )}
+          </section>
+        )}
 
-      {/* PASO 5: formulario y confirmar */}
-      {horaElegida && (
-        <section style={{ marginTop: 24, color: '#1F3864' }}>
-          <h2>5. Tus datos</h2>
-          <p>
-            <strong>{barberoElegido?.nombre}</strong> — {servicioElegido?.nombre} ($
-            {servicioElegido?.precio.toLocaleString('es-CO')})<br />
-            {diaElegido} a las {hora12(horaElegida)}
-          </p>
+        {/* PASO 3: día */}
+        {servicioElegido && (
+          <section className="mb-8">
+            <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
+              3. Elige el día
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {dias.map((d) => {
+                const valor = aTextoFecha(d);
+                return (
+                  <button
+                    key={valor}
+                    onClick={() => setDiaElegido(valor)}
+                    className={`px-5 py-4 rounded-xl border capitalize transition ${
+                      diaElegido === valor
+                        ? 'border-amber-400 bg-neutral-800'
+                        : 'border-neutral-700 bg-neutral-900 hover:border-neutral-500'
+                    }`}
+                  >
+                    {aTextoBonito(d)}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-            <input
-              placeholder="Nombre completo"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-            />
-            <input
-              placeholder="Teléfono"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-            />
-            <input
-              placeholder="Correo electrónico"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-            />
-          </div>
+        {/* PASO 4: hora */}
+        {diaElegido && (
+          <section className="mb-8">
+            <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
+              4. Elige la hora
+            </h2>
+            {cargandoHoras ? (
+              <p className="text-neutral-400">Cargando horas disponibles...</p>
+            ) : horasLibres.length === 0 ? (
+              <p className="text-neutral-400">No hay horas disponibles este día. Prueba con otro.</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {horasLibres.map((hora) => (
+                  <button
+                    key={hora}
+                    onClick={() => setHoraElegida(hora)}
+                    className={`px-5 py-3 rounded-xl border transition ${
+                      horaElegida === hora
+                        ? 'border-amber-400 bg-neutral-800'
+                        : 'border-neutral-700 bg-neutral-900 hover:border-neutral-500'
+                    }`}
+                  >
+                    {hora12(hora)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
-          {email.trim() !== '' && !emailValido(email) && (
-            <p style={{ color: '#c0392b', fontSize: 14 }}>
-              El correo no parece válido.
-            </p>
-          )}
+        {/* PASO 5: formulario */}
+        {horaElegida && (
+          <section className="mb-8">
+            <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
+              5. Tus datos
+            </h2>
+            <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 mb-4">
+              <p className="text-neutral-300">
+                <strong className="text-white">{barberoElegido?.nombre}</strong> — {servicioElegido?.nombre} (${servicioElegido?.precio.toLocaleString('es-CO')})
+              </p>
+              <p className="text-neutral-400 text-sm">{diaElegido} a las {hora12(horaElegida!)}</p>
+            </div>
 
-          {errorGuardado && (
-            <p style={{ color: '#c0392b', marginTop: 8 }}>{errorGuardado}</p>
-          )}
+            <div className="flex flex-col gap-3">
+              <input
+                placeholder="Nombre completo"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="p-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+              />
+              <input
+                placeholder="Teléfono"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                className="p-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+              />
+              <input
+                placeholder="Correo electrónico"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="p-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+              />
+            </div>
 
-          <button
-            onClick={confirmarReserva}
-            disabled={!formularioCompleto || guardando}
-            style={{
-              marginTop: 16,
-              padding: '14px 24px',
-              borderRadius: 8,
-              border: 'none',
-              background: formularioCompleto && !guardando ? '#1F3864' : '#aaa',
-              color: '#fff',
-              cursor: formularioCompleto && !guardando ? 'pointer' : 'not-allowed',
-              fontSize: 16,
-            }}
-          >
-            {guardando ? 'Guardando...' : 'Confirmar reserva'}
-          </button>
-        </section>
-      )}
-    </div>
+            {email.trim() !== '' && !emailValido(email) && (
+              <p className="text-red-400 text-sm mt-2">El correo no parece válido.</p>
+            )}
+            {errorGuardado && <p className="text-red-400 mt-2">{errorGuardado}</p>}
+
+            <button
+              onClick={confirmarReserva}
+              disabled={!formularioCompleto || guardando}
+              className={`mt-4 w-full py-4 rounded-xl font-bold uppercase tracking-wide transition ${
+                formularioCompleto && !guardando
+                  ? 'bg-amber-400 text-neutral-950 hover:bg-amber-300 cursor-pointer'
+                  : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+              }`}
+            >
+              {guardando ? 'Guardando...' : 'Confirmar reserva'}
+            </button>
+          </section>
+        )}
+      </div>
+    </main>
   );
 }
