@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Cita } from './page';
+import { hora12 } from '@/lib/formato';
 
 type Vista = 'hoy' | 'proximas' | 'anteriores';
 
@@ -102,7 +103,7 @@ export default function AgendaTabs({ citas }: { citas: Cita[] }) {
               }}
             >
               <div style={{ fontWeight: 'bold', fontSize: 16 }}>
-                {cita.fecha} — {cita.hora.slice(0, 5)}
+                {cita.fecha} — {hora12(cita.hora)}
               </div>
               <div style={{ marginTop: 6 }}>Cliente: {cita.nombre_cliente}</div>
               <div>Barbero: {cita.barbers?.nombre ?? '—'}</div>

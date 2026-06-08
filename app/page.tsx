@@ -7,9 +7,10 @@ export default async function Home() {
     .select('*')
     .eq('activo', true);
 
-  const { data: services } = await supabase
+const { data: services } = await supabase
     .from('services')
-    .select('*');
-
+    .select('*')
+    .eq('activo', true);
+    
   return <ReservaFlow barbers={barbers ?? []} services={services ?? []} />;
 }

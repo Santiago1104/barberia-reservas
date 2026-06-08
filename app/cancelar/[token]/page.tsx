@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import CancelarCliente from './CancelarCliente';
+import { hora12 } from '@/lib/formato';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,15 +29,17 @@ export default async function CancelarPage({
     );
   }
 
-  const barbero = (cita.barbers as { nombre: string } | null)?.nombre ?? '—';
-  const servicio = (cita.services as { nombre: string } | null)?.nombre ?? '—';
+const barbero =
+    (cita.barbers as unknown as { nombre: string } | null)?.nombre ?? '—';
+  const servicio =
+    (cita.services as unknown as { nombre: string } | null)?.nombre ?? '—';
 
   return (
     <CancelarCliente
       token={token}
       estado={cita.estado}
       fecha={cita.fecha}
-      hora={cita.hora.slice(0, 5)}
+      hora={hora12(cita.hora)}
       nombreCliente={cita.nombre_cliente}
       barbero={barbero}
       servicio={servicio}

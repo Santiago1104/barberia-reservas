@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { hora12 } from '@/lib/formato';
 
 type Barber = {
   id: string;
   nombre: string;
+  descripcion: string | null;
   foto_url: string | null;
   activo: boolean;
 };
@@ -200,16 +202,42 @@ async function confirmarReserva() {
               key={b.id}
               onClick={() => setBarberoElegido(b)}
               style={{
-                padding: '16px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: 16,
                 borderRadius: 8,
                 border: barberoElegido?.id === b.id ? '2px solid #1F3864' : '1px solid #ccc',
                 background: barberoElegido?.id === b.id ? '#e8eef7' : '#fff',
                 color: '#1F3864',
                 cursor: 'pointer',
-                fontSize: 16,
+                textAlign: 'left',
+                width: '100%',
               }}
             >
-              {b.nombre}
+              {b.foto_url ? (
+                <img
+                  src={b.foto_url}
+                  alt={b.nombre}
+                  style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    background: '#e8eef7',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <div>
+                <div style={{ fontWeight: 'bold', fontSize: 16 }}>{b.nombre}</div>
+                {b.descripcion && (
+                  <div style={{ fontSize: 14, color: '#555' }}>{b.descripcion}</div>
+                )}
+              </div>
             </button>
           ))}
         </div>
@@ -249,7 +277,7 @@ async function confirmarReserva() {
       {servicioElegido && (
         <section style={{ marginTop: 24 }}>
           <h2>3. Elige el día</h2>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {dias.map((d) => {
               const valor = aTextoFecha(d);
               return (
@@ -297,7 +325,7 @@ async function confirmarReserva() {
                     cursor: 'pointer',
                   }}
                 >
-                  {hora}
+                  {hora12(hora)}
                 </button>
               ))}
             </div>

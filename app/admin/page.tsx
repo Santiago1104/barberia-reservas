@@ -38,6 +38,14 @@ export default async function AdminPage() {
         <BotonSalir />
       </div>
       <p style={{ color: '#555' }}>Sesión: {user?.email}</p>
+      <div style={{ display: 'flex', gap: 12, margin: '12px 0' }}>
+        <a href="/admin/barberos" style={{ color: '#1F3864' }}>
+          Gestionar barberos
+        </a>
+        <a href="/admin/servicios" style={{ color: '#1F3864' }}>
+          Gestionar servicios
+        </a>
+      </div>
 
       <AgendaTabs citas={listaCitas} />
     </div>
