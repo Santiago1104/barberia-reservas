@@ -7,3 +7,12 @@ export function hora12(hora24: string): string {
   const minutos = String(m).padStart(2, '0');
   return `${h12}:${minutos} ${periodo}`;
 }
+// Convierte "2026-06-09" a "9 de junio de 2026"
+export function fechaBonita(fecha: string): string {
+  const [año, mes, dia] = fecha.split('-').map(Number);
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+  ];
+  return `${dia} de ${meses[mes - 1]} de ${año}`;
+}

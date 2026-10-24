@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import ReservaFlow from '../components/ReservaFlow';
+export const dynamic = 'force-dynamic';
 
 export default async function ReservasPage() {
   const { data: barbers } = await supabase

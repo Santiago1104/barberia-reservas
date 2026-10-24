@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { hora12 } from '@/lib/formato';
+import { useState, useEffect, useRef  } from 'react';
+import { hora12, fechaBonita } from '@/lib/formato';
+import { HORARIO, DIAS_ANTICIPACION } from '@/lib/config-reservas';
+
 
 type Barber = {
   id: string;
@@ -19,11 +20,10 @@ type Service = {
   precio: number;
 };
 
-const HORARIO = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
 
 function generarDias(): Date[] {
   const dias: Date[] = [];
-  for (let i = 0; i <= 3; i++) {
+  for (let i = 0; i <= DIAS_ANTICIPACION; i++) {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + i);
@@ -69,6 +69,10 @@ export default function ReservaFlow({
   const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
   const [reservaHecha, setReservaHecha] = useState<{ cancelToken: string } | null>(null);
 
+  const refServicio = useRef<HTMLDivElement>(null);
+  const refDia = useRef<HTMLDivElement>(null);
+  const refHora = useRef<HTMLDivElement>(null);
+  const refDatos = useRef<HTMLDivElement>(null);
   const dias = generarDias();
 
   useEffect(() => {
@@ -91,6 +95,22 @@ export default function ReservaFlow({
     cargarHorasOcupadas();
   }, [barberoElegido, diaElegido]);
 
+    // Scroll automático al siguiente paso cuando se elige una opción
+  useEffect(() => {
+    if (barberoElegido) refServicio.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [barberoElegido]);
+
+  useEffect(() => {
+    if (servicioElegido) refDia.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [servicioElegido]);
+
+  useEffect(() => {
+    if (diaElegido) refHora.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [diaElegido]);
+
+  useEffect(() => {
+    if (horaElegida) refDatos.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [horaElegida]);
   const hoyTexto = aTextoFecha(new Date());
   const ahora = new Date();
 
@@ -133,8 +153,6 @@ export default function ReservaFlow({
           nombre_cliente: nombre.trim(),
           telefono_cliente: telefono.trim(),
           email_cliente: email.trim(),
-          barbero_nombre: barberoElegido.nombre,
-          servicio_nombre: servicioElegido.nombre,
         }),
       });
 
@@ -170,7 +188,7 @@ export default function ReservaFlow({
             ¡Reserva confirmada!
           </h1>
           <p className="text-neutral-300 mb-2">
-            Tu cita con <strong className="text-white">{barberoElegido?.nombre}</strong> quedó agendada para el {diaElegido} a las {hora12(horaElegida!)}.
+            Tu cita con <strong className="text-white">{barberoElegido?.nombre}</strong> quedó agendada para el {fechaBonita(diaElegido!)} a las {hora12(horaElegida!)}.
           </p>
           <p className="text-neutral-400 text-sm mb-6">Servicio: {servicioElegido?.nombre}</p>
          <p className="text-neutral-300 text-sm mb-6">Enviamos los detalles a tu correo electrónico.</p>
@@ -224,7 +242,7 @@ export default function ReservaFlow({
 
         {/* PASO 2: servicio */}
         {barberoElegido && (
-          <section className="mb-8">
+          <section ref={refServicio} className="mb-8">
             <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
               2. Elige el servicio
             </h2>
@@ -250,7 +268,7 @@ export default function ReservaFlow({
 
         {/* PASO 3: día */}
         {servicioElegido && (
-          <section className="mb-8">
+          <section ref={refDia} className="mb-8">
             <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
               3. Elige el día
             </h2>
@@ -277,7 +295,7 @@ export default function ReservaFlow({
 
         {/* PASO 4: hora */}
         {diaElegido && (
-          <section className="mb-8">
+          <section ref={refHora} className="mb-8">
             <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
               4. Elige la hora
             </h2>
@@ -307,7 +325,7 @@ export default function ReservaFlow({
 
         {/* PASO 5: formulario */}
         {horaElegida && (
-          <section className="mb-8">
+          <section ref={refDatos} className="mb-8">
             <h2 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg text-white mb-3">
               5. Tus datos
             </h2>
@@ -315,7 +333,7 @@ export default function ReservaFlow({
               <p className="text-neutral-300">
                 <strong className="text-white">{barberoElegido?.nombre}</strong> — {servicioElegido?.nombre} (${servicioElegido?.precio.toLocaleString('es-CO')})
               </p>
-              <p className="text-neutral-400 text-sm">{diaElegido} a las {hora12(horaElegida!)}</p>
+              <p className="text-neutral-400 text-sm">{fechaBonita(diaElegido!)} a las {hora12(horaElegida!)}</p>
             </div>
 
             <div className="flex flex-col gap-3">

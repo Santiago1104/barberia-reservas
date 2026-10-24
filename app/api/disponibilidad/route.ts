@@ -1,12 +1,17 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
+import { REGEX_ID, REGEX_FECHA, excedeLimite, ipDe } from '@/lib/seguridad';
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const barberId = searchParams.get('barber_id');
-  const fecha = searchParams.get('fecha');
+  if (excedeLimite(`disp:${ipDe(request)}`, 60, 60 * 1000)) {
+    return NextResponse.json({ error: 'demasiados_intentos' }, { status: 429 });
+  }
 
-  if (!barberId || !fecha) {
+  const { searchParams } = new URL(request.url);
+  const barberId = searchParams.get('barber_id') ?? '';
+  const fecha = searchParams.get('fecha') ?? '';
+
+  if (!REGEX_ID.test(barberId) || !REGEX_FECHA.test(fecha)) {
     return NextResponse.json({ error: 'faltan_parametros' }, { status: 400 });
   }
 

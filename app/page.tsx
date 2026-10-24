@@ -34,6 +34,15 @@ const redes = [
 export default function Home() {
   return (
     <main style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+     <div style={{ width: '100%', maxWidth: 600, padding: '16px 24px 0', display: 'flex', justifyContent: 'flex-end' }}>
+        <Link href="/login" aria-label="Acceso barbero" style={{ color: '#888', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontSize: 14 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          Login
+        </Link>
+      </div>
       <section style={{ width: '100%', maxWidth: 600, padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         <Image src="/logo.png" alt="Africa Latina Barbershop" width={260} height={260} style={{ borderRadius: 16 }} priority />
         <h1 style={{ fontFamily: 'var(--font-oswald)', fontSize: 38, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginTop: 24, marginBottom: 8, color: '#d4a437' }}>Africa Latina Barbershop</h1>

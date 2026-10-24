@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import type { Cita } from './page';
-import { hora12 } from '@/lib/formato';
+import type { Cita, BarberoOpcion } from './page';
+import { hora12, fechaBonita } from '@/lib/formato';
 
 type Vista = 'hoy' | 'proximas' | 'anteriores';
 
-// Convierte fecha "2026-06-09" + hora "10:00:00" en un objeto Date
 function fechaHoraDe(cita: Cita): Date {
   const [año, mes, dia] = cita.fecha.split('-').map(Number);
   const [h, m] = cita.hora.split(':').map(Number);
@@ -21,31 +20,38 @@ function esMismoDia(a: Date, b: Date): boolean {
   );
 }
 
-export default function AgendaTabs({ citas }: { citas: Cita[] }) {
+export default function AgendaTabs({
+  citas,
+  barberos,
+}: {
+  citas: Cita[];
+  barberos: BarberoOpcion[];
+}) {
   const [vista, setVista] = useState<Vista>('hoy');
+  const [barberoFiltro, setBarberoFiltro] = useState<string>('todos');
   const ahora = new Date();
 
-  // Clasificar cada cita en uno de los tres grupos
+  // Filtrar por barbero antes de clasificar
+  const citasFiltradas =
+    barberoFiltro === 'todos'
+      ? citas
+      : citas.filter((c) => c.barber_id === barberoFiltro);
+
   const hoy: Cita[] = [];
   const proximas: Cita[] = [];
   const anteriores: Cita[] = [];
 
-  for (const cita of citas) {
+  for (const cita of citasFiltradas) {
     const cuando = fechaHoraDe(cita);
-
     if (cuando < ahora) {
-      // ya pasó (incluye las de la mañana de hoy)
       anteriores.push(cita);
     } else if (esMismoDia(cuando, ahora)) {
-      // es hoy y aún no llega su hora
       hoy.push(cita);
     } else {
-      // día futuro
       proximas.push(cita);
     }
   }
 
-  // Las anteriores se ven mejor de la más reciente a la más vieja
   anteriores.reverse();
 
   const grupos = { hoy, proximas, anteriores };
@@ -58,31 +64,43 @@ export default function AgendaTabs({ citas }: { citas: Cita[] }) {
   ];
 
   return (
-    <div style={{ marginTop: 24 }}>
+    <div>
+      {/* Filtro de barbero */}
+      <div className="mb-5">
+        <label className="text-neutral-400 text-sm block mb-1">Barbero:</label>
+        <select
+          value={barberoFiltro}
+          onChange={(e) => setBarberoFiltro(e.target.value)}
+          className="w-full p-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white focus:border-amber-400 focus:outline-none"
+        >
+          <option value="todos">Todos los barberos</option>
+          {barberos.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Pestañas */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div className="flex gap-2 mb-6">
         {tabs.map((t) => (
           <button
             key={t.clave}
             onClick={() => setVista(t.clave)}
-            style={{
-              padding: '10px 16px',
-              borderRadius: 8,
-              border: '1px solid #1F3864',
-              background: vista === t.clave ? '#1F3864' : '#fff',
-              color: vista === t.clave ? '#fff' : '#1F3864',
-              cursor: 'pointer',
-              fontSize: 14,
-            }}
+            className={`px-4 py-2 rounded-lg border text-sm transition ${
+              vista === t.clave
+                ? 'border-amber-400 bg-amber-400 text-neutral-950 font-bold'
+                : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
+            }`}
           >
             {t.etiqueta} ({t.cantidad})
           </button>
         ))}
       </div>
 
-      {/* Lista */}
       {citasMostradas.length === 0 ? (
-        <p>
+        <p className="text-neutral-400">
           {vista === 'hoy'
             ? 'No tienes más citas hoy.'
             : vista === 'proximas'
@@ -90,30 +108,26 @@ export default function AgendaTabs({ citas }: { citas: Cita[] }) {
             : 'No hay citas anteriores.'}
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {citasMostradas.map((cita) => (
             <div
               key={cita.id}
-              style={{
-                padding: 16,
-                borderRadius: 8,
-                border: '1px solid #ccc',
-                background: '#fff',
-                opacity: vista === 'anteriores' ? 0.7 : 1,
-              }}
+              className={`p-4 rounded-xl border border-neutral-800 bg-neutral-900 ${
+                vista === 'anteriores' ? 'opacity-60' : ''
+              }`}
             >
-              <div style={{ fontWeight: 'bold', fontSize: 16 }}>
-                {cita.fecha} — {hora12(cita.hora)}
+              <div className="font-bold text-amber-400">
+                {fechaBonita(cita.fecha)} — {hora12(cita.hora)}
               </div>
-              <div style={{ marginTop: 6 }}>Cliente: {cita.nombre_cliente}</div>
-              <div>Barbero: {cita.barbers?.nombre ?? '—'}</div>
-              <div>
+              <div className="mt-1">Cliente: {cita.nombre_cliente}</div>
+              <div className="text-neutral-300">Barbero: {cita.barbers?.nombre ?? '—'}</div>
+              <div className="text-neutral-300">
                 Servicio: {cita.services?.nombre ?? '—'}
                 {cita.services?.precio
                   ? ` ($${cita.services.precio.toLocaleString('es-CO')})`
                   : ''}
               </div>
-              <div style={{ color: '#555', fontSize: 14, marginTop: 6 }}>
+              <div className="text-neutral-500 text-sm mt-1">
                 Tel: {cita.telefono_cliente} · {cita.email_cliente}
               </div>
             </div>

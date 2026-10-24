@@ -77,114 +77,89 @@ export default function ServiciosPage() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', padding: 20, color: '#1F3864' }}>
-      <Link href="/admin" style={{ color: '#1F3864' }}>
-        ← Volver a la agenda
-      </Link>
-      <h1>Servicios</h1>
+    <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
+      <div className="max-w-xl mx-auto">
+        <Link href="/admin" className="text-neutral-400 hover:text-amber-400 transition text-sm">
+          ← Volver a la agenda
+        </Link>
+        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-2 mb-6">
+          Servicios
+        </h1>
 
-      {!mostrarForm && (
-        <button
-          onClick={() => setMostrarForm(true)}
-          style={{
-            marginTop: 16,
-            padding: '12px 20px',
-            borderRadius: 8,
-            border: '1px solid #1F3864',
-            background: '#fff',
-            color: '#1F3864',
-            cursor: 'pointer',
-          }}
-        >
-          + Nuevo servicio
-        </button>
-      )}
+        {!mostrarForm && (
+          <button
+            onClick={() => setMostrarForm(true)}
+            className="mb-6 px-5 py-3 rounded-xl border border-amber-400 text-amber-400 font-bold hover:bg-amber-400 hover:text-neutral-950 transition"
+          >
+            + Nuevo servicio
+          </button>
+        )}
 
-      {mostrarForm && (
-      <>
-      {/* Crear */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-        <input
-          placeholder="Nombre del servicio"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-        />
-        <input
-          placeholder="Descripción (opcional)"
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-        />
-        <input
-          placeholder="Precio (ej. 25000)"
-          value={precio}
-          onChange={(e) => setPrecio(e.target.value)}
-          inputMode="numeric"
-          style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-        />
-        <button
-          onClick={crear}
-          disabled={cargando}
-          style={{
-            padding: '12px 20px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#1F3864',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          {cargando ? 'Agregando...' : 'Agregar servicio'}
-        </button>
-      </div>
-{error && <p style={{ color: '#c0392b' }}>{error}</p>}
-      </>
-      )}
-
-      {/* Lista */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 24 }}>
-        {servicios.length === 0 ? (
-          <p>No hay servicios activos.</p>
-        ) : (
-          servicios.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 14,
-                borderRadius: 8,
-                border: '1px solid #ccc',
-                background: '#fff',
-              }}
-            >
-              <div>
-                <strong>{s.nombre}</strong>
-                {s.descripcion && (
-                  <div style={{ fontSize: 14, color: '#555' }}>{s.descripcion}</div>
-                )}
-                <div>${s.precio.toLocaleString('es-CO')}</div>
-              </div>
+        {mostrarForm && (
+          <div className="flex flex-col gap-3 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <input
+              placeholder="Nombre del servicio"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+            />
+            <input
+              placeholder="Descripción (opcional)"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+            />
+            <input
+              placeholder="Precio (ej. 25000)"
+              value={precio}
+              onChange={(e) => setPrecio(e.target.value)}
+              inputMode="numeric"
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+            />
+            <div className="flex gap-2">
               <button
-                onClick={() => desactivar(s.id, s.nombre)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  border: '1px solid #c0392b',
-                  background: '#fff',
-                  color: '#c0392b',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
+                onClick={crear}
+                disabled={cargando}
+                className="flex-1 py-3 rounded-xl bg-amber-400 text-neutral-950 font-bold hover:bg-amber-300 transition disabled:opacity-60"
               >
-                Desactivar
+                {cargando ? 'Agregando...' : 'Agregar servicio'}
+              </button>
+              <button
+                onClick={() => setMostrarForm(false)}
+                className="px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 hover:border-neutral-500 transition"
+              >
+                Cancelar
               </button>
             </div>
-          ))
+          </div>
         )}
+        {error && <p className="text-red-400 mb-4">{error}</p>}
+
+        <div className="flex flex-col gap-3">
+          {servicios.length === 0 ? (
+            <p className="text-neutral-400">No hay servicios activos.</p>
+          ) : (
+            servicios.map((s) => (
+              <div
+                key={s.id}
+                className="flex justify-between items-center p-4 rounded-xl border border-neutral-800 bg-neutral-900"
+              >
+                <div>
+                  <div className="font-bold">{s.nombre}</div>
+                  {s.descripcion && <div className="text-sm text-neutral-400">{s.descripcion}</div>}
+                  <div className="text-amber-400">${s.precio.toLocaleString('es-CO')}</div>
+                </div>
+                <button
+                  onClick={() => desactivar(s.id, s.nombre)}
+                  className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition shrink-0"
+                >
+                  Desactivar
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

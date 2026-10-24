@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
+import { escaparHtml as e } from './seguridad';
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
-const REMITENTE = 'Africa Latina Barbershop <onboarding@resend.dev>';
+// Con un dominio verificado en Resend, definir EMAIL_FROM (ej. 'Africa Latina <citas@tudominio.com>')
+const REMITENTE = process.env.EMAIL_FROM || 'Africa Latina Barbershop <onboarding@resend.dev>';
 
 type DatosReserva = {
   emailCliente: string;
@@ -20,7 +22,7 @@ function plantilla(contenido: string): string {
 
 export async function enviarConfirmacion(datos: DatosReserva) {
   try {
-    const contenido = `<h2 style="color:#ffffff;font-size:18px;margin:0 0 16px">¡Tu cita está confirmada!</h2><p style="color:#ddd;margin:0 0 16px">Hola ${datos.nombreCliente}, estos son los detalles:</p><div style="background:#1a1a1a;border-radius:8px;padding:16px;margin:0 0 24px;color:#ddd"><p style="margin:0 0 8px"><strong style="color:#d4a437">Barbero:</strong> ${datos.barbero}</p><p style="margin:0 0 8px"><strong style="color:#d4a437">Servicio:</strong> ${datos.servicio}</p><p style="margin:0 0 8px"><strong style="color:#d4a437">Fecha:</strong> ${datos.fecha}</p><p style="margin:0"><strong style="color:#d4a437">Hora:</strong> ${datos.hora}</p></div><a href="${datos.urlCancelar}" style="display:block;background:#c0392b;color:#ffffff;padding:14px;border-radius:8px;text-align:center;text-decoration:none;font-weight:bold">Cancelar mi cita</a>`;
+    const contenido = `<h2 style="color:#ffffff;font-size:18px;margin:0 0 16px">¡Tu cita está confirmada!</h2><p style="color:#ddd;margin:0 0 16px">Hola ${e(datos.nombreCliente)}, estos son los detalles:</p><div style="background:#1a1a1a;border-radius:8px;padding:16px;margin:0 0 24px;color:#ddd"><p style="margin:0 0 8px"><strong style="color:#d4a437">Barbero:</strong> ${e(datos.barbero)}</p><p style="margin:0 0 8px"><strong style="color:#d4a437">Servicio:</strong> ${e(datos.servicio)}</p><p style="margin:0 0 8px"><strong style="color:#d4a437">Fecha:</strong> ${e(datos.fecha)}</p><p style="margin:0"><strong style="color:#d4a437">Hora:</strong> ${e(datos.hora)}</p></div><a href="${e(datos.urlCancelar)}" style="display:block;background:#c0392b;color:#ffffff;padding:14px;border-radius:8px;text-align:center;text-decoration:none;font-weight:bold">Cancelar mi cita</a>`;
     await resend.emails.send({
       from: REMITENTE,
       to: datos.emailCliente,
@@ -39,7 +41,7 @@ export async function enviarCancelacion(datos: {
   hora: string;
 }) {
   try {
-    const contenido = `<h2 style="color:#ffffff;font-size:18px;margin:0 0 16px">Cita cancelada</h2><p style="color:#ddd;margin:0 0 16px">Hola ${datos.nombreCliente}, confirmamos que tu cita del ${datos.fecha} a las ${datos.hora} fue cancelada.</p><p style="color:#ddd;margin:0">Esperamos verte pronto. Puedes agendar una nueva cita cuando quieras.</p>`;
+    const contenido = `<h2 style="color:#ffffff;font-size:18px;margin:0 0 16px">Cita cancelada</h2><p style="color:#ddd;margin:0 0 16px">Hola ${e(datos.nombreCliente)}, confirmamos que tu cita del ${e(datos.fecha)} a las ${e(datos.hora)} fue cancelada.</p><p style="color:#ddd;margin:0">Esperamos verte pronto. Puedes agendar una nueva cita cuando quieras.</p>`;
     await resend.emails.send({
       from: REMITENTE,
       to: datos.emailCliente,

@@ -46,7 +46,6 @@ export default function BarberosPage() {
 
     let foto_url: string | null = null;
 
-    // 1. Si hay archivo, subirlo a Storage
     if (archivo) {
       const nombreArchivo = `${Date.now()}-${archivo.name.replace(/\s/g, '_')}`;
       const { error: errSubida } = await supabase.storage
@@ -59,14 +58,12 @@ export default function BarberosPage() {
         return;
       }
 
-      // 2. Obtener la URL pública
       const { data: urlData } = supabase.storage
         .from('barberos')
         .getPublicUrl(nombreArchivo);
       foto_url = urlData.publicUrl;
     }
 
-    // 3. Crear el barbero (vía API route)
     const res = await fetch('/api/admin/barberos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -100,125 +97,98 @@ export default function BarberosPage() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '40px auto', padding: 20, color: '#1F3864' }}>
-      <Link href="/admin" style={{ color: '#1F3864' }}>
-        ← Volver a la agenda
-      </Link>
-      <h1>Barberos</h1>
+    <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
+      <div className="max-w-xl mx-auto">
+        <Link href="/admin" className="text-neutral-400 hover:text-amber-400 transition text-sm">
+          ← Volver a la agenda
+        </Link>
+        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-2 mb-6">
+          Barberos
+        </h1>
 
-{!mostrarForm && (
-        <button
-          onClick={() => setMostrarForm(true)}
-          style={{
-            marginTop: 16,
-            padding: '12px 20px',
-            borderRadius: 8,
-            border: '1px solid #1F3864',
-            background: '#fff',
-            color: '#1F3864',
-            cursor: 'pointer',
-          }}
-        >
-          + Nuevo barbero
-        </button>
-      )}
+        {!mostrarForm && (
+          <button
+            onClick={() => setMostrarForm(true)}
+            className="mb-6 px-5 py-3 rounded-xl border border-amber-400 text-amber-400 font-bold hover:bg-amber-400 hover:text-neutral-950 transition"
+          >
+            + Nuevo barbero
+          </button>
+        )}
 
-      {mostrarForm && (
-      <>
-      {/* Crear */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-        <input
-          placeholder="Nombre del barbero"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc' }}
-        />
-        <textarea
-          placeholder="Descripción (ej. Especialista en cortes clásicos)"
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-          rows={2}
-          style={{ padding: 12, borderRadius: 8, border: '1px solid #ccc', resize: 'vertical' }}
-        />
-        <label style={{ fontSize: 14, color: '#555' }}>
-          Foto del barbero:
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-            style={{ display: 'block', marginTop: 4 }}
-          />
-        </label>
-        <button
-          onClick={crear}
-          disabled={cargando}
-          style={{
-            padding: '12px 20px',
-            borderRadius: 8,
-            border: 'none',
-            background: '#1F3864',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          {cargando ? 'Guardando...' : 'Agregar barbero'}
-        </button>
-      </div>
-{error && <p style={{ color: '#c0392b' }}>{error}</p>}
-      </>
-      )}
-
-      {/* Lista */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 24 }}>
-        {barberos.length === 0 ? (
-          <p>No hay barberos activos.</p>
-        ) : (
-          barberos.map((b) => (
-            <div
-              key={b.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 14,
-                borderRadius: 8,
-                border: '1px solid #ccc',
-                background: '#fff',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {b.foto_url && (
-                  <img
-                    src={b.foto_url}
-                    alt={b.nombre}
-                    style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <div>
-                  <strong>{b.nombre}</strong>
-                  {b.descripcion && (
-                    <div style={{ fontSize: 14, color: '#555' }}>{b.descripcion}</div>
-                  )}
-                </div>
-              </div>
+        {mostrarForm && (
+          <div className="flex flex-col gap-3 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <input
+              placeholder="Nombre del barbero"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+            />
+            <textarea
+              placeholder="Descripción (ej. Especialista en cortes clásicos)"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              rows={2}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none resize-y"
+            />
+            <label className="text-sm text-neutral-400">
+              Foto del barbero:
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+                className="block mt-1 text-neutral-300"
+              />
+            </label>
+            <div className="flex gap-2">
               <button
-                onClick={() => desactivar(b.id, b.nombre)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: 8,
-                  border: '1px solid #c0392b',
-                  background: '#fff',
-                  color: '#c0392b',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                }}
+                onClick={crear}
+                disabled={cargando}
+                className="flex-1 py-3 rounded-xl bg-amber-400 text-neutral-950 font-bold hover:bg-amber-300 transition disabled:opacity-60"
               >
-                Desactivar
+                {cargando ? 'Guardando...' : 'Agregar barbero'}
+              </button>
+              <button
+                onClick={() => setMostrarForm(false)}
+                className="px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 hover:border-neutral-500 transition"
+              >
+                Cancelar
               </button>
             </div>
-          ))
+          </div>
         )}
+        {error && <p className="text-red-400 mb-4">{error}</p>}
+
+        <div className="flex flex-col gap-3">
+          {barberos.length === 0 ? (
+            <p className="text-neutral-400">No hay barberos activos.</p>
+          ) : (
+            barberos.map((b) => (
+              <div
+                key={b.id}
+                className="flex justify-between items-center p-4 rounded-xl border border-neutral-800 bg-neutral-900"
+              >
+                <div className="flex items-center gap-4">
+                  {b.foto_url ? (
+                    <img src={b.foto_url} alt={b.nombre} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-neutral-700" />
+                  )}
+                  <div>
+                    <div className="font-bold">{b.nombre}</div>
+                    {b.descripcion && <div className="text-sm text-neutral-400">{b.descripcion}</div>}
+                  </div>
+                </div>
+                <button
+                  onClick={() => desactivar(b.id, b.nombre)}
+                  className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition shrink-0"
+                >
+                  Desactivar
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

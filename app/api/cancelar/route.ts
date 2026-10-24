@@ -1,27 +1,24 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 import { enviarCancelacion } from '@/lib/email';
+import { hora12, fechaBonita } from '@/lib/formato';
+import { notificarWhatsApp } from '@/lib/notificar';
+import { MINUTOS_CANCELACION } from '@/lib/config-reservas';
+import { momentoCita } from '@/lib/tiempo';
+import { REGEX_ID, excedeLimite, ipDe } from '@/lib/seguridad';
 
 const supabase = supabaseAdmin;
 
-async function notificarWhatsApp(mensaje: string) {
-  const phone = process.env.CALLMEBOT_PHONE;
-  const apikey = process.env.CALLMEBOT_APIKEY;
-  const url =
-    `https://api.callmebot.com/whatsapp.php?phone=${phone}` +
-    `&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) console.error('CallMeBot error:', res.status);
-  } catch (err) {
-    console.error('No se pudo enviar WhatsApp:', err);
-  }
-}
-
 export async function POST(request: Request) {
   try {
-    const { token } = await request.json();
-    if (!token) {
+    // Máximo 10 intentos por IP cada 10 minutos (frena adivinar tokens)
+    if (excedeLimite(`cancelar:${ipDe(request)}`, 10, 10 * 60 * 1000)) {
+      return NextResponse.json({ error: 'demasiados_intentos' }, { status: 429 });
+    }
+
+    const cuerpo = await request.json().catch(() => null);
+    const token = typeof cuerpo?.token === 'string' ? cuerpo.token : '';
+    if (!REGEX_ID.test(token)) {
       return NextResponse.json({ error: 'sin_token' }, { status: 400 });
     }
 
@@ -43,28 +40,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ya_cancelada' }, { status: 409 });
     }
 
-    // 3. Validar la regla de los 30 minutos
-    const [año, mes, dia] = cita.fecha.split('-').map(Number);
-    const [h, m] = cita.hora.split(':').map(Number);
-    const fechaCita = new Date(año, mes - 1, dia, h, m, 0, 0);
-    const limite = new Date(fechaCita.getTime() - 30 * 60 * 1000); // 30 min antes
-
-    if (new Date() > limite) {
+    // 3. Regla de los 30 minutos (hora de Colombia, independiente del servidor)
+    const limite = momentoCita(cita.fecha, cita.hora) - MINUTOS_CANCELACION * 60 * 1000;
+    if (Date.now() > limite) {
       return NextResponse.json({ error: 'fuera_de_plazo' }, { status: 409 });
     }
 
-    // 4. Cancelar (cambiar estado)
-    const { error: errUpdate } = await supabase
+    // 4. Cancelar solo si sigue confirmada (evita doble cancelación simultánea)
+    const { data: actualizadas, error: errUpdate } = await supabase
       .from('appointments')
       .update({ estado: 'cancelada' })
-      .eq('cancel_token', token);
+      .eq('cancel_token', token)
+      .eq('estado', 'confirmada')
+      .select('id');
 
     if (errUpdate) {
       return NextResponse.json({ error: 'error_cancelar' }, { status: 500 });
     }
+    if (!actualizadas || actualizadas.length === 0) {
+      return NextResponse.json({ error: 'ya_cancelada' }, { status: 409 });
+    }
 
-    // 5. Avisar al dueño
-const barbero =
+    // 5. Avisar al dueño y al cliente (best-effort, en paralelo)
+    const barbero =
       (cita.barbers as unknown as { nombre: string } | null)?.nombre ?? '—';
     const servicio =
       (cita.services as unknown as { nombre: string } | null)?.nombre ?? '—';
@@ -73,16 +71,17 @@ const barbero =
       `Cliente: ${cita.nombre_cliente}\n` +
       `Barbero: ${barbero}\n` +
       `Servicio: ${servicio}\n` +
-      `Era: ${cita.fecha} a las ${cita.hora.slice(0, 5)}`;
-    await notificarWhatsApp(mensaje);
+      `Fecha: ${fechaBonita(cita.fecha)} a las ${hora12(cita.hora)}`;
 
-    // Avisar al cliente por correo (best-effort)
-    await enviarCancelacion({
-      emailCliente: cita.email_cliente,
-      nombreCliente: cita.nombre_cliente,
-      fecha: cita.fecha,
-      hora: cita.hora.slice(0, 5),
-    });
+    await Promise.allSettled([
+      notificarWhatsApp(mensaje),
+      enviarCancelacion({
+        emailCliente: cita.email_cliente,
+        nombreCliente: cita.nombre_cliente,
+        fecha: fechaBonita(cita.fecha),
+        hora: hora12(cita.hora),
+      }),
+    ]);
 
     return NextResponse.json({ ok: true });
   } catch (err) {
