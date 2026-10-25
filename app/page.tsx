@@ -1,5 +1,43 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
+import Revelar from './components/Revelar';
+import AgendarFijo from './components/AgendarFijo';
+
+// Los barberos y servicios se leen de la base y la página se renueva cada minuto
+export const revalidate = 60;
+
+type Barbero = { id: string; nombre: string; descripcion: string | null; foto_url: string | null };
+type Servicio = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  precio: number;
+  duracion_min: number;
+};
+
+async function cargarCatalogo(): Promise<{ barberos: Barbero[]; servicios: Servicio[] }> {
+  try {
+    const [barberos, servicios] = await Promise.all([
+      supabase
+        .from('barbers')
+        .select('id, nombre, descripcion, foto_url')
+        .eq('activo', true)
+        .order('nombre'),
+      supabase
+        .from('services')
+        .select('id, nombre, descripcion, precio, duracion_min')
+        .eq('activo', true)
+        .order('nombre'),
+    ]);
+    return {
+      barberos: (barberos.data ?? []) as Barbero[],
+      servicios: (servicios.data ?? []) as Servicio[],
+    };
+  } catch {
+    return { barberos: [], servicios: [] };
+  }
+}
 
 const redes = [
   {
@@ -31,71 +69,194 @@ const redes = [
   },
 ];
 
-export default function Home() {
+const estiloTitulo =
+  'font-[family-name:var(--font-oswald)] uppercase tracking-wide text-2xl font-bold text-amber-400 mb-6 text-center';
+
+export default async function Home() {
+  const { barberos, servicios } = await cargarCatalogo();
+
   return (
-    <main style={{ minHeight: '100vh', background: '#1a1a1a', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-     <div style={{ width: '100%', maxWidth: 600, padding: '16px 24px 0', display: 'flex', justifyContent: 'flex-end' }}>
-        <Link href="/login" aria-label="Acceso barbero" style={{ color: '#888', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontSize: 14 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <main className="relative overflow-x-hidden bg-neutral-950 text-white pb-24 md:pb-0">
+      <header className="absolute top-0 inset-x-0 z-10 flex justify-end p-4">
+        <Link
+          href="/login"
+          aria-label="Acceso barberos"
+          title="Acceso barberos"
+          className="presionable inline-flex h-11 w-11 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/60 text-neutral-200 backdrop-blur hover:border-amber-400 hover:text-amber-400"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
-          Login
         </Link>
-      </div>
-      <section style={{ width: '100%', maxWidth: 600, padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-        <Image src="/logo.png" alt="Africa Latina Barbershop" width={260} height={260} style={{ borderRadius: 16 }} priority />
-        <h1 style={{ fontFamily: 'var(--font-oswald)', fontSize: 38, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginTop: 24, marginBottom: 8, color: '#d4a437' }}>Africa Latina Barbershop</h1>
-        <p style={{ fontSize: 18, color: '#dddddd', marginBottom: 32 }}>Cortes americanos y todos los estilos</p>
-        <Link href="/reservas" style={{ display: 'inline-block', background: '#d4a437', color: '#1a1a1a', fontWeight: 'bold', fontSize: 18, padding: '16px 40px', borderRadius: 10, textDecoration: 'none' }}>
-          Agendar cita
-        </Link>
-      </section>
+      </header>
 
-      <section style={{ width: '100%', maxWidth: 600, padding: '24px' }}>
-        <h2 style={{ color: '#d4a437', fontSize: 22, marginBottom: 16, textAlign: 'center' }}>¿Dónde estamos?</h2>
-        <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid #333' }}>
-          <iframe
-            src="https://www.google.com/maps?q=2.4381109,-76.6081384&z=17&output=embed"
-            width="100%"
-            height="300"
-            style={{ border: 0 }}
-            loading="lazy"
-          />
-        </div>
-        <p style={{ textAlign: 'center', marginTop: 12 }}>
-          <Link href="https://maps.app.goo.gl/1nPDN3dYNyLsjaHC6" target="_blank" style={{ color: '#d4a437' }}>
-            Ver en Google Maps
-          </Link>
+      {/* Portada */}
+      <section className="flex flex-col items-center px-6 pt-24 pb-16 text-center bg-[radial-gradient(ellipse_at_top,rgba(212,164,55,0.18),transparent_65%)]">
+        <Image
+          src="/logo.png"
+          alt="Africa Latina Barbershop"
+          width={220}
+          height={220}
+          priority
+          className="anim-entrar rounded-2xl shadow-2xl shadow-black/60"
+        />
+        <h1
+          style={{ animationDelay: '0.1s' }}
+          className="anim-entrar mt-8 font-[family-name:var(--font-oswald)] text-4xl sm:text-5xl font-bold uppercase tracking-wide text-amber-400"
+        >
+          Africa Latina Barbershop
+        </h1>
+        <p style={{ animationDelay: '0.2s' }} className="anim-entrar mt-3 text-lg text-neutral-300">
+          Cortes americanos y todos los estilos
         </p>
+        <div style={{ animationDelay: '0.3s' }} className="anim-entrar mt-8">
+          <Link
+            id="cta-agendar"
+            href="/reservas"
+            className="presionable inline-flex items-center rounded-xl bg-amber-400 px-10 py-4 text-lg font-bold uppercase tracking-wide text-neutral-950 shadow-lg shadow-amber-400/20 hover:bg-amber-300"
+          >
+            Agendar cita
+          </Link>
+        </div>
       </section>
 
-      <footer style={{ width: '100%', maxWidth: 600, padding: '24px', textAlign: 'center', borderTop: '1px solid #333', marginTop: 24 }}>
-        <h2 style={{ color: '#d4a437', fontSize: 22, marginBottom: 20 }}>Síguenos</h2>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
-          {redes.map((red) => (
-            <Link
-              key={red.url}
-              href={red.url}
-              target="_blank"
-              aria-label={red.nombre}
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: '50%',
-                background: '#d4a437',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#1a1a1a',
-              }}
-            >
-              {red.icono}
-            </Link>
-          ))}
-        </div>
-        <p style={{ color: '#666', fontSize: 13, marginTop: 24 }}>Africa Latina Barbershop</p>
+      <div className="mx-auto flex max-w-2xl flex-col gap-16 px-6 pb-16">
+        {/* Servicios */}
+        {servicios.length > 0 && (
+          <Revelar>
+            <section aria-labelledby="titulo-servicios">
+              <h2 id="titulo-servicios" className={estiloTitulo}>
+                Servicios
+              </h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {servicios.map((sv) => (
+                  <li
+                    key={sv.id}
+                    className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 transition-colors hover:border-amber-400/60"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-bold">{sv.nombre}</h3>
+                      <span className="shrink-0 font-bold text-amber-400">
+                        ${sv.precio.toLocaleString('es-CO')}
+                      </span>
+                    </div>
+                    {sv.descripcion && <p className="mt-1 text-sm text-neutral-300">{sv.descripcion}</p>}
+                    <p className="mt-2 text-xs text-neutral-400">{sv.duracion_min} min</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </Revelar>
+        )}
+
+        {/* Barberos */}
+        {barberos.length > 0 && (
+          <Revelar>
+            <section aria-labelledby="titulo-barberos">
+              <h2 id="titulo-barberos" className={estiloTitulo}>
+                Nuestros barberos
+              </h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {barberos.map((b) => (
+                  <li
+                    key={b.id}
+                    className="flex items-center gap-4 rounded-xl border border-neutral-800 bg-neutral-900 p-4"
+                  >
+                    {b.foto_url ? (
+                      <Image
+                        src={b.foto_url}
+                        alt=""
+                        width={64}
+                        height={64}
+                        unoptimized
+                        className="h-16 w-16 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        aria-hidden="true"
+                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-2xl font-bold text-amber-400"
+                      >
+                        {b.nombre.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="font-bold">{b.nombre}</h3>
+                      {b.descripcion && <p className="text-sm text-neutral-300">{b.descripcion}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 text-center">
+                <Link
+                  href="/reservas"
+                  className="presionable inline-flex min-h-11 items-center rounded-xl border border-amber-400 px-6 font-bold text-amber-400 hover:bg-amber-400 hover:text-neutral-950"
+                >
+                  Reservar con ellos
+                </Link>
+              </div>
+            </section>
+          </Revelar>
+        )}
+
+        {/* Ubicación */}
+        <Revelar>
+          <section aria-labelledby="titulo-donde">
+            <h2 id="titulo-donde" className={estiloTitulo}>
+              ¿Dónde estamos?
+            </h2>
+            <div className="overflow-hidden rounded-2xl border border-neutral-800">
+              <iframe
+                title="Mapa de Africa Latina Barbershop"
+                src="https://www.google.com/maps?q=2.4381109,-76.6081384&z=17&output=embed"
+                width="100%"
+                height="300"
+                style={{ border: 0 }}
+                loading="lazy"
+              />
+            </div>
+            <div className="mt-4 text-center">
+              <Link
+                href="https://maps.app.goo.gl/1nPDN3dYNyLsjaHC6"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="presionable inline-flex min-h-11 items-center gap-2 rounded-xl border border-neutral-700 px-6 text-neutral-200 hover:border-amber-400 hover:text-amber-400"
+              >
+                Cómo llegar
+              </Link>
+            </div>
+          </section>
+        </Revelar>
+
+        {/* Redes */}
+        <Revelar>
+          <section aria-labelledby="titulo-redes" className="text-center">
+            <h2 id="titulo-redes" className={estiloTitulo}>
+              Síguenos
+            </h2>
+            <div className="flex justify-center gap-5">
+              {redes.map((red) => (
+                <Link
+                  key={red.url}
+                  href={red.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={red.nombre}
+                  className="presionable flex h-14 w-14 items-center justify-center rounded-full bg-amber-400 text-neutral-950 hover:scale-110 hover:bg-amber-300"
+                >
+                  {red.icono}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </Revelar>
+      </div>
+
+      <footer className="border-t border-neutral-800 px-6 py-6 text-center text-sm text-neutral-400">
+        © {new Date().getFullYear()} Africa Latina Barbershop
       </footer>
+
+      <AgendarFijo />
     </main>
   );
 }

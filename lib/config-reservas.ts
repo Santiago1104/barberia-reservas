@@ -25,3 +25,6 @@ export const MINUTOS_CANCELACION = 30;
 export const DIAS_BLOQUEO = 60;
 
 export const ZONA_HORARIA = 'America/Bogota';
+
+// WhatsApp del negocio (con indicativo de país), para que el cliente escriba
+export const WHATSAPP_NEGOCIO = '573148532393';
