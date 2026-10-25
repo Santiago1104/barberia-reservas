@@ -174,6 +174,14 @@ export async function POST(request: Request) {
           `Fecha: ${fechaBonita(fecha)}`,
           ...aNotificar.map((c) => `${hora12(c.hora)} - ${c.nombre_cliente}`),
         ],
+        push: {
+          titulo: aNotificar.length === 1 ? 'Cita cancelada por bloqueo' : 'Citas canceladas por bloqueo',
+          cuerpo:
+            aNotificar
+              .slice(0, 3)
+              .map((c) => `${c.nombre_cliente} · ${hora12(c.hora)}`)
+              .join(', ') + (aNotificar.length > 3 ? ` y ${aNotificar.length - 3} más` : ''),
+        },
       }),
     ]);
   }

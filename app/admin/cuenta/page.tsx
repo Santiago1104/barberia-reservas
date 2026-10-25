@@ -1,5 +1,6 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
 import CambiarClaveForm from './CambiarClaveForm';
+import NotificacionesPush from './NotificacionesPush';
 import BotonVolver from '@/app/components/BotonVolver';
 
 export const metadata = { title: 'Mi cuenta' };
@@ -22,6 +23,7 @@ export default async function CuentaPage() {
         <p className="text-neutral-400 text-sm mb-6">{user?.email}</p>
         <h2 className="text-neutral-200 mb-3">Cambiar contraseña</h2>
         <CambiarClaveForm />
+        <NotificacionesPush />
       </div>
     </main>
   );

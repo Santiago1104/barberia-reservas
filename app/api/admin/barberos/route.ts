@@ -194,6 +194,7 @@ export async function PATCH(request: Request) {
   if (correo && !correosDuenios().includes(correo)) {
     const usuario = barbero.user_id ? { id: barbero.user_id } : await buscarUsuarioPorEmail(correo);
     if (usuario) await fijarBloqueoUsuario(usuario.id, true);
+    await supabaseAdmin.from('push_suscripciones').delete().eq('email', correo);
   }
   return NextResponse.json({ ok: true });
 }

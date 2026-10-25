@@ -133,6 +133,10 @@ export async function POST(request: Request) {
           `Fecha: ${fechaBonita(fecha)} a las ${hora12(hora)}`,
           `Tel: ${telefono_cliente}`,
         ],
+        push: {
+          titulo: 'Nueva reserva',
+          cuerpo: `${nombre_cliente} · ${hora12(hora)} · ${fechaBonita(fecha)}`,
+        },
       }),
       enviarConfirmacion({
         emailCliente: email_cliente,

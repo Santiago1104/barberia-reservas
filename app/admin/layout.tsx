@@ -1,9 +1,22 @@
+import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { esAdmin } from '@/lib/seguridad';
 import AdminNav, { type EnlaceAdmin } from './AdminNav';
 import BotonSalir from './BotonSalir';
 import FeedbackProvider from '@/app/components/Feedback';
+
+// El panel se puede instalar en el celular como app (PWA). El manifiesto solo se ofrece aquí,
+// no en la página pública de los clientes.
+export const metadata: Metadata = {
+  manifest: '/panel.webmanifest',
+  appleWebApp: { capable: true, title: 'Africa Latina', statusBarStyle: 'black' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0a0a0a',
+};
 
 // Marco común del panel: cabecera fija con navegación, usuario y salida
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

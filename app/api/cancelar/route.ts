@@ -76,6 +76,10 @@ export async function POST(request: Request) {
           `Servicio: ${servicio}`,
           `Fecha: ${fechaBonita(cita.fecha)} a las ${hora12(cita.hora)}`,
         ],
+        push: {
+          titulo: 'Cita cancelada',
+          cuerpo: `${cita.nombre_cliente} · ${hora12(cita.hora)} · ${fechaBonita(cita.fecha)}`,
+        },
       }),
       enviarCancelacion({
         emailCliente: cita.email_cliente,

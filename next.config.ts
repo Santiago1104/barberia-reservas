@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'no-store' },
         ],
       },
+      // El service worker no debe quedar en caché, para que las actualizaciones lleguen
+      {
+        source: '/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }],
+      },
       {
         source: '/(admin|login)/:path*',
         headers: [
