@@ -42,13 +42,16 @@ export function excedeLimite(clave: string, maximo: number, ventanaMs: number): 
   return reg.cuenta > maximo;
 }
 
-// Si ADMIN_EMAILS está definido (separado por comas), solo esos correos son admin.
-// Si no, cualquier usuario autenticado lo es (comportamiento anterior).
+// Correos de los dueños (ADMIN_EMAILS, separados por comas). Si no está definido, nadie es dueño.
+export function correosDuenios(): string[] {
+  return (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function esAdmin(user: User | null): boolean {
-  if (!user) return false;
-  const lista = process.env.ADMIN_EMAILS?.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-  if (!lista || lista.length === 0) return true;
-  return !!user.email && lista.includes(user.email.toLowerCase());
+  return !!user?.email && correosDuenios().includes(user.email.toLowerCase());
 }
 
 export async function usuarioAdmin(supabase: SupabaseClient): Promise<User | null> {

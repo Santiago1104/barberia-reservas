@@ -10,7 +10,14 @@ type Barbero = {
   descripcion: string | null;
   foto_url: string | null;
   email: string | null;
-  activo: boolean;
+};
+
+type ClaveEntregada = { nombre: string; email: string; clave: string };
+
+const ERRORES: Record<string, string> = {
+  email_repetido: 'Ya existe un barbero con ese correo.',
+  email_requerido: 'El correo del barbero es obligatorio y debe ser válido.',
+  error_crear_cuenta: 'No se pudo crear la cuenta de acceso. Intenta de nuevo.',
 };
 
 export default function BarberosPage() {
@@ -22,20 +29,22 @@ export default function BarberosPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [claveEntregada, setClaveEntregada] = useState<ClaveEntregada | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   const supabase = crearClienteNavegador();
 
   async function cargarBarberos() {
-    const { data } = await supabase
-      .from('barbers')
-      .select('id, nombre, descripcion, foto_url, email, activo')
-      .eq('activo', true)
-      .order('nombre');
-    setBarberos((data ?? []) as Barbero[]);
+    const res = await fetch('/api/admin/barberos');
+    if (!res.ok) return;
+    const data = await res.json();
+    setBarberos(data.barberos as Barbero[]);
   }
 
   useEffect(() => {
-    cargarBarberos();
+    fetch('/api/admin/barberos')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setBarberos(data.barberos as Barbero[]));
   }, []);
 
   async function crear() {
@@ -75,16 +84,16 @@ export default function BarberosPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, descripcion, foto_url, email }),
     });
+    const data = await res.json().catch(() => ({}));
 
     setCargando(false);
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(
-        data.error === 'email_repetido'
-          ? 'Ya existe un barbero con ese correo.'
-          : 'No se pudo crear el barbero.'
-      );
+      setError(ERRORES[data.error] ?? 'No se pudo crear el barbero.');
       return;
+    }
+    if (data.claveTemporal) {
+      setClaveEntregada({ nombre: nombre.trim(), email: email.trim().toLowerCase(), clave: data.claveTemporal });
+      setCopiado(false);
     }
     setNombre('');
     setDescripcion('');
@@ -94,9 +103,34 @@ export default function BarberosPage() {
     cargarBarberos();
   }
 
+  async function restablecerClave(b: Barbero) {
+    const confirmado = window.confirm(
+      `Se generará una contraseña temporal nueva para ${b.nombre}. La anterior dejará de funcionar. ¿Continuar?`
+    );
+    if (!confirmado) return;
+
+    setError(null);
+    const res = await fetch('/api/admin/barberos/clave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: b.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(
+        data.error === 'es_duenio'
+          ? 'La contraseña del dueño la cambia él mismo desde Supabase.'
+          : 'No se pudo restablecer la contraseña.'
+      );
+      return;
+    }
+    setClaveEntregada({ nombre: b.nombre, email: b.email ?? '', clave: data.claveTemporal });
+    setCopiado(false);
+  }
+
   async function desactivar(id: string, nombreBarbero: string) {
     const confirmado = window.confirm(
-      `¿Seguro que quieres desactivar a ${nombreBarbero}? Dejará de aparecer en las reservas.`
+      `¿Seguro que quieres desactivar a ${nombreBarbero}? Dejará de aparecer en las reservas y su acceso al panel se bloqueará.`
     );
     if (!confirmado) return;
 
@@ -108,6 +142,16 @@ export default function BarberosPage() {
     if (res.ok) cargarBarberos();
   }
 
+  async function copiarClave() {
+    if (!claveEntregada) return;
+    try {
+      await navigator.clipboard.writeText(claveEntregada.clave);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
       <div className="max-w-xl mx-auto">
@@ -117,6 +161,34 @@ export default function BarberosPage() {
         <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-2 mb-6">
           Barberos
         </h1>
+
+        {claveEntregada && (
+          <div className="mb-6 bg-neutral-900 border border-amber-400 rounded-xl p-4">
+            <p className="font-bold text-amber-400 mb-1">Acceso de {claveEntregada.nombre}</p>
+            <p className="text-sm text-neutral-300">Correo: {claveEntregada.email}</p>
+            <p className="text-sm text-neutral-300 mb-2">Contraseña temporal:</p>
+            <div className="flex gap-2 items-center">
+              <code className="flex-1 p-3 rounded-lg bg-neutral-950 border border-neutral-700 text-amber-300 select-all">
+                {claveEntregada.clave}
+              </code>
+              <button
+                onClick={copiarClave}
+                className="px-4 py-3 rounded-lg border border-neutral-700 text-neutral-200 hover:border-amber-400 transition"
+              >
+                {copiado ? 'Copiada' : 'Copiar'}
+              </button>
+            </div>
+            <p className="text-xs text-red-400 mt-2">
+              Se muestra solo ahora. Entrégasela al barbero; no se puede volver a ver (solo restablecer).
+            </p>
+            <button
+              onClick={() => setClaveEntregada(null)}
+              className="mt-3 text-sm text-neutral-400 hover:text-white transition"
+            >
+              Ya la entregué, cerrar
+            </button>
+          </div>
+        )}
 
         {!mostrarForm && (
           <button
@@ -149,6 +221,9 @@ export default function BarberosPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
+            <p className="text-xs text-neutral-500">
+              Se creará su cuenta de acceso con una contraseña temporal que verás una sola vez.
+            </p>
             <label className="text-sm text-neutral-400">
               Foto del barbero:
               <input
@@ -184,30 +259,40 @@ export default function BarberosPage() {
             barberos.map((b) => (
               <div
                 key={b.id}
-                className="flex justify-between items-center p-4 rounded-xl border border-neutral-800 bg-neutral-900"
+                className="flex justify-between items-center gap-3 p-4 rounded-xl border border-neutral-800 bg-neutral-900"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 min-w-0">
                   {b.foto_url ? (
-                    <img src={b.foto_url} alt={b.nombre} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={b.foto_url} alt={b.nombre} className="w-12 h-12 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-neutral-700" />
+                    <div className="w-12 h-12 rounded-full bg-neutral-700 shrink-0" />
                   )}
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-bold">{b.nombre}</div>
                     {b.descripcion && <div className="text-sm text-neutral-400">{b.descripcion}</div>}
                     {b.email ? (
-                      <div className="text-xs text-neutral-500">{b.email}</div>
+                      <div className="text-xs text-neutral-500 truncate">{b.email}</div>
                     ) : (
-                      <div className="text-xs text-red-400">Sin correo: no recibirá avisos ni podrá gestionar su agenda</div>
+                      <div className="text-xs text-red-400">Sin correo: no recibirá avisos ni podrá entrar</div>
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => desactivar(b.id, b.nombre)}
-                  className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition shrink-0"
-                >
-                  Desactivar
-                </button>
+                <div className="flex flex-col gap-2 shrink-0">
+                  {b.email && (
+                    <button
+                      onClick={() => restablecerClave(b)}
+                      className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+                    >
+                      Restablecer clave
+                    </button>
+                  )}
+                  <button
+                    onClick={() => desactivar(b.id, b.nombre)}
+                    className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition"
+                  >
+                    Desactivar
+                  </button>
+                </div>
               </div>
             ))
           )}

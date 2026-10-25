@@ -1,5 +1,4 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
-import { esAdmin } from '@/lib/seguridad';
 import { barberosPermitidos } from '@/lib/permisos';
 import { DIAS_BLOQUEO } from '@/lib/config-reservas';
 import { hoyColombia } from '@/lib/tiempo';
@@ -13,7 +12,7 @@ export default async function DisponibilidadPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const barberos = user ? await barberosPermitidos(user, esAdmin(user)) : [];
+  const barberos = user ? await barberosPermitidos(user) : [];
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">

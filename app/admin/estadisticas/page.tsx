@@ -1,4 +1,4 @@
-import { crearClienteServidor } from '@/lib/supabase-server';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import Link from 'next/link';
 import EstadisticasPanel from './EstadisticasPanel';
 
@@ -12,7 +12,8 @@ export type CitaStat = {
 export type BarberoOpcion = { id: string; nombre: string };
 
 export default async function EstadisticasPage() {
-  const supabase = await crearClienteServidor();
+  // El acceso (solo dueño) lo controla el layout de esta sección
+  const supabase = supabaseAdmin;
 
   const { data: citas } = await supabase
     .from('appointments')

@@ -1,34 +1,31 @@
 import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from './supabase-admin';
+import { esAdmin } from './seguridad';
 
 export type BarberoPermitido = { id: string; nombre: string };
 
 // Barberos cuya agenda puede gestionar este usuario:
-// - Si su correo está ligado a un barbero (barbers.email), solo ese barbero.
-// - Si no está ligado y es admin (ver esAdmin), todos los barberos activos.
-// - Si no, ninguno.
-// Un correo listado explícitamente en ADMIN_EMAILS (dueño) siempre gestiona a todos.
-export async function barberosPermitidos(user: User, esAdminUsuario: boolean): Promise<BarberoPermitido[]> {
+// - El dueño (ADMIN_EMAILS): todos los barberos activos.
+// - Un barbero: solo el suyo, ligado por barbers.email.
+// - Cualquier otro: ninguno.
+export async function barberosPermitidos(user: User): Promise<BarberoPermitido[]> {
+  if (esAdmin(user)) {
+    const { data } = await supabaseAdmin
+      .from('barbers')
+      .select('id, nombre')
+      .eq('activo', true)
+      .order('nombre');
+    return data ?? [];
+  }
+
   const correo = user.email?.toLowerCase();
-  const duenio =
-    !!correo &&
-    !!process.env.ADMIN_EMAILS?.split(',').map((e) => e.trim().toLowerCase()).includes(correo);
+  if (!correo) return [];
 
-  const { data: propio } = correo
-    ? await supabaseAdmin
-        .from('barbers')
-        .select('id, nombre')
-        .eq('activo', true)
-        .ilike('email', correo)
-    : { data: null };
-
-  if (propio && propio.length > 0 && !duenio) return propio;
-  if (!duenio && !esAdminUsuario) return [];
-
-  const { data: todos } = await supabaseAdmin
+  // Se escapan los comodines de LIKE (_ y %) para comparar el correo exacto
+  const { data } = await supabaseAdmin
     .from('barbers')
     .select('id, nombre')
     .eq('activo', true)
-    .order('nombre');
-  return todos ?? [];
+    .ilike('email', correo.replace(/[\%_]/g, '\$&'));
+  return data ?? [];
 }

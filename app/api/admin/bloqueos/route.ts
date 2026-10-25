@@ -1,7 +1,7 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
-import { esAdmin, REGEX_ID, REGEX_FECHA } from '@/lib/seguridad';
+import { REGEX_ID, REGEX_FECHA } from '@/lib/seguridad';
 import { barberosPermitidos } from '@/lib/permisos';
 import { HORARIO, DIAS_BLOQUEO } from '@/lib/config-reservas';
 import { hoyColombia, momentoCita } from '@/lib/tiempo';
@@ -23,7 +23,7 @@ async function autorizar(barberId: unknown): Promise<Contexto | NextResponse> {
   if (typeof barberId !== 'string' || !REGEX_ID.test(barberId)) {
     return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 });
   }
-  const permitidos = await barberosPermitidos(user, esAdmin(user));
+  const permitidos = await barberosPermitidos(user);
   const barbero = permitidos.find((b) => b.id === barberId);
   if (!barbero) {
     return NextResponse.json({ error: 'prohibido' }, { status: 403 });

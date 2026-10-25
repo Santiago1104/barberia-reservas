@@ -1,4 +1,7 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { esAdmin } from '@/lib/seguridad';
+import { barberosPermitidos } from '@/lib/permisos';
 import BotonSalir from './BotonSalir';
 import AgendaTabs from './AgendaTabs';
 import Link from 'next/link';
@@ -24,23 +27,25 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: citas } = await supabase
-    .from('appointments')
-    .select(
-      'id, fecha, hora, barber_id, nombre_cliente, telefono_cliente, email_cliente, estado, barbers(nombre), services(nombre, precio)'
-    )
-    .eq('estado', 'confirmada')
-    .order('fecha', { ascending: true })
-    .order('hora', { ascending: true });
+  const duenio = esAdmin(user);
+  const barberos = user ? await barberosPermitidos(user) : [];
+  const ids = barberos.map((b) => b.id);
 
-  const { data: barberos } = await supabase
-    .from('barbers')
-    .select('id, nombre')
-    .eq('activo', true)
-    .order('nombre');
+  // Cada barbero ve solo sus citas; el dueño ve todas
+  const { data: citas } = ids.length
+    ? await supabaseAdmin
+        .from('appointments')
+        .select(
+          'id, fecha, hora, barber_id, nombre_cliente, telefono_cliente, email_cliente, estado, barbers(nombre), services(nombre, precio)'
+        )
+        .eq('estado', 'confirmada')
+        .in('barber_id', ids)
+        .order('fecha', { ascending: true })
+        .order('hora', { ascending: true })
+    : { data: [] };
 
   const listaCitas = (citas ?? []) as unknown as Cita[];
-  const listaBarberos = (barberos ?? []) as BarberoOpcion[];
+  const listaBarberos = barberos as BarberoOpcion[];
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
@@ -55,6 +60,14 @@ export default async function AdminPage() {
 
         <div className="flex gap-3 mb-6 flex-wrap">
           <Link
+            href="/admin/disponibilidad"
+            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+          >
+            Disponibilidad
+          </Link>
+          {duenio && (
+            <>
+          <Link
             href="/admin/barberos"
             className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
           >
@@ -67,17 +80,13 @@ export default async function AdminPage() {
             Gestionar servicios
           </Link>
           <Link
-            href="/admin/disponibilidad"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Disponibilidad
-          </Link>
-          <Link
             href="/admin/estadisticas"
             className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
           >
             Estadísticas
           </Link>
+            </>
+          )}
         </div>
 
         <AgendaTabs citas={listaCitas} barberos={listaBarberos} />
