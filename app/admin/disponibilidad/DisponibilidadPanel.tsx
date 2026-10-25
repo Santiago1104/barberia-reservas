@@ -5,6 +5,7 @@ import { hora12, fechaBonita } from '@/lib/formato';
 
 type Franja = {
   hora: string;
+  fin: string;
   estado: 'libre' | 'bloqueada' | 'reservada' | 'pasada';
   cliente?: string;
   inicio?: boolean;
@@ -145,7 +146,7 @@ export default function DisponibilidadPanel({
       </div>
 
       <p className="text-neutral-500 text-xs mb-3">
-        Toca una franja de 30 minutos para bloquearla o liberarla.
+        Estas son las mismas horas que ve el cliente. Toca una para bloquearla o liberarla.
       </p>
       <div className="flex gap-2 mb-4 flex-wrap">
         <button
@@ -184,6 +185,7 @@ export default function DisponibilidadPanel({
               className={`p-3 rounded-xl border text-left transition ${estilos[f.estado]}`}
             >
               <div className="font-bold">{hora12(f.hora)}</div>
+              <div className="text-[11px] text-neutral-400">hasta {hora12(f.fin)}</div>
               <div className="text-xs mt-1">
                 {f.estado === 'libre' && 'Libre'}
                 {f.estado === 'bloqueada' && 'Bloqueada'}

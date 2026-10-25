@@ -1,10 +1,10 @@
 import { supabaseAdmin } from './supabase-admin';
-import { diaSemana, type Rango, type CitaOcupada } from './disponibilidad';
+import { diaSemana, type Rango, type CitaOcupada, type BloqueoOcupa } from './disponibilidad';
 
 export type DiaCargado = {
   rangos: Rango[];
   citas: (CitaOcupada & { nombre_cliente: string })[];
-  bloqueos: string[];
+  bloqueos: BloqueoOcupa[];
 };
 
 // Datos de un día para un barbero: su horario, citas confirmadas y franjas bloqueadas.
@@ -22,7 +22,7 @@ export async function cargarDia(barberId: string, fecha: string): Promise<DiaCar
       .eq('barber_id', barberId)
       .eq('fecha', fecha)
       .eq('estado', 'confirmada'),
-    supabaseAdmin.from('bloqueos').select('hora').eq('barber_id', barberId).eq('fecha', fecha),
+    supabaseAdmin.from('bloqueos').select('hora, duracion_min').eq('barber_id', barberId).eq('fecha', fecha),
   ]);
   if (horarios.error || citas.error || bloqueos.error) {
     console.error('Error al cargar el día:', horarios.error ?? citas.error ?? bloqueos.error);
@@ -42,6 +42,9 @@ export async function cargarDia(barberId: string, fecha: string): Promise<DiaCar
       duracion_min: c.duracion_min ?? 60,
       nombre_cliente: c.nombre_cliente,
     })),
-    bloqueos: (bloqueos.data ?? []).map((b) => b.hora.slice(0, 5)),
+    bloqueos: (bloqueos.data ?? []).map((b) => ({
+      hora: b.hora.slice(0, 5),
+      duracion_min: b.duracion_min ?? 30,
+    })),
   };
 }

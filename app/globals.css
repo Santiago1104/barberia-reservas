@@ -1,26 +1,101 @@
 @import "tailwindcss";
 
+/* La app es oscura (negro y dorado) en todos los dispositivos */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--background);
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Foco visible para quien navega con teclado */
+:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+/* ---------- Animaciones ---------- */
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes aparecer {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pop {
+  0%   { opacity: 0; transform: scale(0.5); }
+  60%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes subir {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes trazo {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Entrada suave de una sección o pantalla */
+.anim-entrar   { animation: entrar 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.anim-aparecer { animation: aparecer 0.3s ease backwards; }
+/* Insignia de "elegido" */
+.anim-pop      { animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+/* Barra inferior que sube desde el borde */
+.anim-subir    { animation: subir 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+/* Palomita que se dibuja sola */
+.anim-trazo {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: trazo 0.5s 0.3s ease forwards;
+}
+
+/* Botones y tarjetas que responden al toque */
+.presionable {
+  transition: transform 0.15s ease, border-color 0.2s ease, background-color 0.2s ease,
+    color 0.2s ease;
+}
+.presionable:active {
+  transform: scale(0.97);
+}
+
+/* Barra de pestañas con desplazamiento sin mostrar la barra */
+.sin-barra {
+  scrollbar-width: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Quien pide menos movimiento en su dispositivo no ve animaciones */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .anim-trazo {
+    stroke-dashoffset: 0;
+  }
 }

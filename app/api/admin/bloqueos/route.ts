@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { REGEX_FECHA } from '@/lib/seguridad';
 import { autorizarAgenda } from '@/lib/autorizar-agenda';
 import { cargarDia } from '@/lib/agenda';
-import { franjasDelDia, citaCubreFranja } from '@/lib/disponibilidad';
+import { franjasDelDia, citaCubreFranja, aMin, deMin } from '@/lib/disponibilidad';
 import { DIAS_BLOQUEO } from '@/lib/config-reservas';
 import { hoyColombia, momentoCita } from '@/lib/tiempo';
 import { hora12, fechaBonita } from '@/lib/formato';
@@ -20,7 +20,7 @@ function fechaValida(fecha: unknown): fecha is string {
 }
 
 function listaDeHoras(horas: unknown): string[] | null {
-  if (!Array.isArray(horas) || horas.length === 0 || horas.length > 48) return null;
+  if (!Array.isArray(horas) || horas.length === 0 || horas.length > 100) return null;
   if (!horas.every((h) => typeof h === 'string' && /^\d{2}:\d{2}$/.test(h))) return null;
   return [...new Set(horas as string[])];
 }
@@ -43,15 +43,27 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'error_consulta' }, { status: 500 });
   }
 
-  const franjas = franjasDelDia(dia.rangos).map((hora) => {
-    const cita = dia.citas.find((c) => citaCubreFranja(c, hora));
-    if (cita) {
-      return { hora, estado: 'reservada', cliente: cita.nombre_cliente, inicio: cita.hora === hora };
-    }
-    if (dia.bloqueos.includes(hora)) return { hora, estado: 'bloqueada' };
-    if (momentoCita(fecha, hora) <= Date.now()) return { hora, estado: 'pasada' };
-    return { hora, estado: 'libre' };
-  });
+  const grilla = franjasDelDia(dia.rangos);
+  const horasGrilla = new Set(grilla.map((f) => f.hora));
+
+  // Bloqueos que ya no coinciden con la grilla (p. ej. se cambió el "cada ___ min" después)
+  // se muestran igual para poder quitarlos
+  const antiguas = dia.bloqueos
+    .filter((b) => !horasGrilla.has(b.hora))
+    .map((b) => ({ hora: b.hora, duracion: b.duracion_min }));
+
+  const franjas = [...grilla, ...antiguas]
+    .sort((x, y) => x.hora.localeCompare(y.hora))
+    .map((f) => {
+      const base = { hora: f.hora, fin: deMin(aMin(f.hora) + f.duracion) };
+      const cita = dia.citas.find((c) => citaCubreFranja(c, f));
+      if (cita) {
+        return { ...base, estado: 'reservada', cliente: cita.nombre_cliente, inicio: cita.hora === f.hora };
+      }
+      if (dia.bloqueos.some((b) => b.hora === f.hora)) return { ...base, estado: 'bloqueada' };
+      if (momentoCita(fecha, f.hora) <= Date.now()) return { ...base, estado: 'pasada' };
+      return { ...base, estado: 'libre' };
+    });
   return NextResponse.json({ franjas });
 }
 
@@ -74,9 +86,12 @@ export async function POST(request: Request) {
   }
 
   // Solo se bloquean franjas del horario de ese día que todavía no pasaron
-  const validas = new Set(franjasDelDia(dia.rangos));
-  const horas = horasPedidas.filter((h) => validas.has(h) && momentoCita(fecha, h) > Date.now());
-  if (horas.length === 0) {
+  const grilla = new Map(franjasDelDia(dia.rangos).map((f) => [f.hora, f]));
+  const franjasABloquear = horasPedidas
+    .map((h) => grilla.get(h))
+    .filter((f): f is { hora: string; duracion: number } => !!f && momentoCita(fecha, f.hora) > Date.now());
+  const horas = franjasABloquear.map((f) => f.hora);
+  if (franjasABloquear.length === 0) {
     return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 });
   }
 
@@ -91,8 +106,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'error_consulta' }, { status: 500 });
   }
   const afectadas = (citasDia ?? []).filter((c) =>
-    horas.some((h) =>
-      citaCubreFranja({ hora: c.hora.slice(0, 5), duracion_min: c.duracion_min ?? 60 }, h)
+    franjasABloquear.some((f) =>
+      citaCubreFranja({ hora: c.hora.slice(0, 5), duracion_min: c.duracion_min ?? 60 }, f)
     )
   );
 
@@ -108,13 +123,14 @@ export async function POST(request: Request) {
 
   // 1. Bloquear primero, para que nadie pueda reservar mientras se cancelan las citas
   const { error: errBloqueo } = await supabaseAdmin.from('bloqueos').upsert(
-    horas.map((hora) => ({
+    franjasABloquear.map((f) => ({
       barber_id: barberId,
       fecha,
-      hora,
+      hora: f.hora,
+      duracion_min: f.duracion,
       creado_por: ctx.userEmail,
     })),
-    { onConflict: 'barber_id,fecha,hora', ignoreDuplicates: true }
+    { onConflict: 'barber_id,fecha,hora' }
   );
   if (errBloqueo) {
     console.error('Error al bloquear:', errBloqueo);

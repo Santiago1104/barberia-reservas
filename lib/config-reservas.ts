@@ -1,8 +1,5 @@
 // Reglas de negocio compartidas entre el formulario y las API routes
 
-// Franja de horario y de bloqueo: bloques de 30 minutos
-export const GRANULARIDAD_MIN = 30;
-
 // Las horas de inicio que ve el cliente se ofrecen cada 15 minutos
 export const PASO_INICIO_MIN = 15;
 

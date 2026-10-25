@@ -1,7 +1,7 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { barberosPermitidos } from '@/lib/permisos';
-import Link from 'next/link';
 import HorariosPanel from './HorariosPanel';
+import BotonVolver from '@/app/components/BotonVolver';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,12 +13,10 @@ export default async function HorariosPage() {
   const barberos = user ? await barberosPermitidos(user) : [];
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
+    <main className="py-8 px-4">
       <div className="max-w-xl mx-auto">
-        <Link href="/admin" className="text-neutral-400 hover:text-amber-400 transition text-sm">
-          ← Volver a la agenda
-        </Link>
-        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-2 mb-2">
+        <BotonVolver href="/admin">Volver a la agenda</BotonVolver>
+        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-5 mb-2">
           Horarios
         </h1>
         <p className="text-neutral-400 text-sm mb-6">

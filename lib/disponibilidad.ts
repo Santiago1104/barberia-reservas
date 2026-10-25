@@ -1,4 +1,4 @@
-import { GRANULARIDAD_MIN, PASO_INICIO_MIN } from './config-reservas';
+import { PASO_INICIO_MIN } from './config-reservas';
 import { momentoCita } from './tiempo';
 
 // Reglas de disponibilidad: las usan el formulario (vía API), el servidor al validar una
@@ -7,6 +7,10 @@ import { momentoCita } from './tiempo';
 // Tramo de trabajo ("09:00" a "12:00") y cada cuántos minutos se ofrece una hora de inicio
 export type Rango = { inicio: string; fin: string; paso?: number };
 export type CitaOcupada = { hora: string; duracion_min: number };
+// Franja bloqueada por el barbero: empieza en `hora` y dura `duracion_min`
+export type BloqueoOcupa = { hora: string; duracion_min: number };
+// Franja del horario del día: las mismas horas que ve el cliente
+export type Franja = { hora: string; duracion: number };
 
 export function aMin(hora: string): number {
   const [h, m] = hora.split(':').map(Number);
@@ -23,23 +27,24 @@ export function diaSemana(fecha: string): number {
   return new Date(Date.UTC(a, m - 1, d)).getUTCDay();
 }
 
-// Franjas de 30 minutos del horario de trabajo del día, contadas desde el inicio de cada tramo
-// (la última puede quedar corta si el tramo no es múltiplo de 30)
-export function franjasDelDia(rangos: Rango[]): string[] {
-  const franjas = new Set<string>();
+// Franjas del día: dentro de cada tramo, una cada `paso` minutos desde su inicio.
+// Cada franja dura hasta la siguiente (la última puede quedar corta al llegar al fin del tramo).
+export function franjasDelDia(rangos: Rango[]): Franja[] {
+  const franjas = new Map<string, Franja>();
   for (const r of rangos) {
-    for (let t = aMin(r.inicio); t < aMin(r.fin); t += GRANULARIDAD_MIN) {
-      franjas.add(deMin(t));
+    const paso = r.paso ?? PASO_INICIO_MIN;
+    for (let t = aMin(r.inicio); t < aMin(r.fin); t += paso) {
+      franjas.set(deMin(t), { hora: deMin(t), duracion: Math.min(paso, aMin(r.fin) - t) });
     }
   }
-  return [...franjas].sort();
+  return [...franjas.values()].sort((a, b) => a.hora.localeCompare(b.hora));
 }
 
-// ¿La cita [hora, hora + duración) se cruza con la franja de 30 minutos que empieza en `franja`?
-export function citaCubreFranja(cita: CitaOcupada, franja: string): boolean {
+// ¿La cita [hora, hora + duración) se cruza con la franja?
+export function citaCubreFranja(cita: CitaOcupada, franja: Franja): boolean {
   const ini = aMin(cita.hora);
-  const f = aMin(franja);
-  return ini < f + GRANULARIDAD_MIN && ini + cita.duracion_min > f;
+  const f = aMin(franja.hora);
+  return ini < f + franja.duracion && ini + cita.duracion_min > f;
 }
 
 // Horas de inicio disponibles para un servicio de `duracion` minutos. Dentro de cada tramo
@@ -49,7 +54,7 @@ export function horasLibres(datos: {
   rangos: Rango[];
   duracion: number;
   citas: CitaOcupada[];
-  bloqueos: string[]; // franjas de 30 min bloqueadas por el barbero
+  bloqueos: BloqueoOcupa[];
   ahora?: number;
 }): string[] {
   const { fecha, rangos, duracion, citas, bloqueos } = datos;
@@ -61,7 +66,7 @@ export function horasLibres(datos: {
       const fin = t + duracion;
       const choca =
         citas.some((c) => aMin(c.hora) < fin && aMin(c.hora) + c.duracion_min > t) ||
-        bloqueos.some((b) => aMin(b) < fin && aMin(b) + GRANULARIDAD_MIN > t);
+        bloqueos.some((b) => aMin(b.hora) < fin && aMin(b.hora) + b.duracion_min > t);
       if (choca) continue;
       if (momentoCita(fecha, deMin(t)) <= ahora) continue; // esa hora ya pasó
       libres.add(deMin(t));

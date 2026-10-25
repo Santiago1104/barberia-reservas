@@ -1,10 +1,7 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { esAdmin } from '@/lib/seguridad';
 import { barberosPermitidos } from '@/lib/permisos';
-import BotonSalir from './BotonSalir';
 import AgendaTabs from './AgendaTabs';
-import Link from 'next/link';
 
 export type Cita = {
   id: string;
@@ -29,7 +26,6 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const duenio = esAdmin(user);
   const barberos = user ? await barberosPermitidos(user) : [];
   const ids = barberos.map((b) => b.id);
 
@@ -50,59 +46,11 @@ export default async function AdminPage() {
   const listaBarberos = barberos as BarberoOpcion[];
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
+    <main className="py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400">
-            Agenda
-          </h1>
-          <BotonSalir />
-        </div>
-        <p className="text-neutral-500 text-sm mb-4">{user?.email}</p>
-
-        <div className="flex gap-3 mb-6 flex-wrap">
-          <Link
-            href="/admin/cuenta"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Mi cuenta
-          </Link>
-          <Link
-            href="/admin/horarios"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Horarios
-          </Link>
-          <Link
-            href="/admin/disponibilidad"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Disponibilidad
-          </Link>
-          {duenio && (
-            <>
-          <Link
-            href="/admin/barberos"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Gestionar barberos
-          </Link>
-          <Link
-            href="/admin/servicios"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Gestionar servicios
-          </Link>
-          <Link
-            href="/admin/estadisticas"
-            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
-          >
-            Estadísticas
-          </Link>
-            </>
-          )}
-        </div>
-
+        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mb-6">
+          Agenda
+        </h1>
         <AgendaTabs citas={listaCitas} barberos={listaBarberos} />
       </div>
     </main>
