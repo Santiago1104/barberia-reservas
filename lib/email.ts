@@ -74,3 +74,25 @@ export async function enviarCancelacionPorBarberia(datos: {
     console.error('No se pudo enviar el correo de cancelación por barbería:', err);
   }
 }
+
+
+// Aviso interno para un barbero (nueva reserva, cancelación, etc.)
+export async function enviarAvisoBarbero(datos: {
+  emailBarbero: string;
+  asunto: string;
+  titulo: string;
+  lineas: string[];
+}) {
+  try {
+    const filas = datos.lineas.map((l) => `<p style="margin:0 0 8px;color:#ddd">${e(l)}</p>`).join('');
+    const contenido = `<h2 style="color:#ffffff;font-size:18px;margin:0 0 16px">${e(datos.titulo)}</h2><div style="background:#1a1a1a;border-radius:8px;padding:16px">${filas}</div>`;
+    await resend.emails.send({
+      from: REMITENTE,
+      to: datos.emailBarbero,
+      subject: datos.asunto,
+      html: plantilla(contenido),
+    });
+  } catch (err) {
+    console.error('No se pudo enviar el aviso al barbero:', err);
+  }
+}

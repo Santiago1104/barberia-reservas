@@ -9,6 +9,7 @@ type Barbero = {
   nombre: string;
   descripcion: string | null;
   foto_url: string | null;
+  email: string | null;
   activo: boolean;
 };
 
@@ -27,7 +28,7 @@ export default function BarberosPage() {
   async function cargarBarberos() {
     const { data } = await supabase
       .from('barbers')
-      .select('id, nombre, descripcion, foto_url, activo')
+      .select('id, nombre, descripcion, foto_url, email, activo')
       .eq('activo', true)
       .order('nombre');
     setBarberos((data ?? []) as Barbero[]);
@@ -40,6 +41,10 @@ export default function BarberosPage() {
   async function crear() {
     if (nombre.trim() === '') {
       setError('El nombre es obligatorio.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+      setError('El correo del barbero es obligatorio y debe ser válido.');
       return;
     }
     setCargando(true);
@@ -73,7 +78,12 @@ export default function BarberosPage() {
 
     setCargando(false);
     if (!res.ok) {
-      setError('No se pudo crear el barbero.');
+      const data = await res.json().catch(() => ({}));
+      setError(
+        data.error === 'email_repetido'
+          ? 'Ya existe un barbero con ese correo.'
+          : 'No se pudo crear el barbero.'
+      );
       return;
     }
     setNombre('');
@@ -134,7 +144,7 @@ export default function BarberosPage() {
             />
             <input
               type="email"
-              placeholder="Correo con el que inicia sesión (para que gestione su agenda)"
+              placeholder="Correo del barbero (obligatorio: login y avisos de reservas)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
@@ -185,6 +195,11 @@ export default function BarberosPage() {
                   <div>
                     <div className="font-bold">{b.nombre}</div>
                     {b.descripcion && <div className="text-sm text-neutral-400">{b.descripcion}</div>}
+                    {b.email ? (
+                      <div className="text-xs text-neutral-500">{b.email}</div>
+                    ) : (
+                      <div className="text-xs text-red-400">Sin correo: no recibirá avisos ni podrá gestionar su agenda</div>
+                    )}
                   </div>
                 </div>
                 <button

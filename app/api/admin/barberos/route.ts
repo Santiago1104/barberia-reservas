@@ -16,14 +16,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'nombre_requerido' }, { status: 400 });
   }
 
+  if (typeof email !== 'string' || !REGEX_EMAIL.test(email.trim())) {
+    return NextResponse.json({ error: 'email_requerido' }, { status: 400 });
+  }
+
   const { error } = await supabase.from('barbers').insert({
     nombre: nombre.trim(),
     descripcion: typeof descripcion === 'string' ? descripcion.trim().slice(0, 300) || null : null,
-    email: typeof email === 'string' && REGEX_EMAIL.test(email.trim()) ? email.trim().toLowerCase() : null,
+    email: email.trim().toLowerCase(),
     foto_url: typeof foto_url === 'string' && /^https:\/\//.test(foto_url) ? foto_url : null,
   });
 
   if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'email_repetido' }, { status: 409 });
+    }
     return NextResponse.json({ error: 'error_crear' }, { status: 500 });
   }
   return NextResponse.json({ ok: true });

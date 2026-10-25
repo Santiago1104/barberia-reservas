@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 import { enviarConfirmacion } from '@/lib/email';
 import { hora12, fechaBonita } from '@/lib/formato';
-import { notificarWhatsApp } from '@/lib/notificar';
+import { notificarBarbero } from '@/lib/notificar';
 import { HORARIO, DIAS_ANTICIPACION } from '@/lib/config-reservas';
 import { hoyColombia, momentoCita } from '@/lib/tiempo';
 import {
@@ -108,16 +108,18 @@ export async function POST(request: Request) {
     }
 
     // 2. Notificaciones en paralelo (best-effort, nunca lanzan error)
-    const mensaje =
-      `Nueva reserva: ${nombre_cliente}\n` +
-      `Barbero: ${barbero.nombre}\n` +
-      `Servicio: ${servicio.nombre}\n` +
-      `Fecha: ${fechaBonita(fecha)} a las ${hora12(hora)}\n` +
-      `Tel: ${telefono_cliente}`;
-
     const urlBase = new URL(request.url).origin;
     await Promise.allSettled([
-      notificarWhatsApp(mensaje),
+      notificarBarbero(barber_id, {
+        asunto: `Nueva reserva - ${fechaBonita(fecha)} ${hora12(hora)}`,
+        titulo: `Nueva reserva: ${nombre_cliente}`,
+        lineas: [
+          `Barbero: ${barbero.nombre}`,
+          `Servicio: ${servicio.nombre}`,
+          `Fecha: ${fechaBonita(fecha)} a las ${hora12(hora)}`,
+          `Tel: ${telefono_cliente}`,
+        ],
+      }),
       enviarConfirmacion({
         emailCliente: email_cliente,
         nombreCliente: nombre_cliente,

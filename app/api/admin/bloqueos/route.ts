@@ -7,7 +7,7 @@ import { HORARIO, DIAS_BLOQUEO } from '@/lib/config-reservas';
 import { hoyColombia, momentoCita } from '@/lib/tiempo';
 import { hora12, fechaBonita } from '@/lib/formato';
 import { enviarCancelacionPorBarberia } from '@/lib/email';
-import { notificarWhatsApp } from '@/lib/notificar';
+import { notificarBarbero } from '@/lib/notificar';
 
 type Contexto = { barberoNombre: string; userEmail: string };
 
@@ -165,11 +165,14 @@ export async function POST(request: Request) {
           urlReservar,
         })
       ),
-      notificarWhatsApp(
-        `Citas canceladas por ${ctx.barberoNombre}\n` +
-          `Fecha: ${fechaBonita(fecha)}\n` +
-          aNotificar.map((c) => `${hora12(c.hora)} - ${c.nombre_cliente}`).join('\n')
-      ),
+      notificarBarbero(barberId, {
+        asunto: `Citas canceladas por bloqueo - ${fechaBonita(fecha)}`,
+        titulo: `Citas canceladas por ${ctx.barberoNombre}`,
+        lineas: [
+          `Fecha: ${fechaBonita(fecha)}`,
+          ...aNotificar.map((c) => `${hora12(c.hora)} - ${c.nombre_cliente}`),
+        ],
+      }),
     ]);
   }
 

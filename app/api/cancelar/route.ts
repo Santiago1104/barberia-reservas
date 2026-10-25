@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 import { enviarCancelacion } from '@/lib/email';
 import { hora12, fechaBonita } from '@/lib/formato';
-import { notificarWhatsApp } from '@/lib/notificar';
+import { notificarBarbero } from '@/lib/notificar';
 import { MINUTOS_CANCELACION } from '@/lib/config-reservas';
 import { momentoCita } from '@/lib/tiempo';
 import { REGEX_ID, excedeLimite, ipDe } from '@/lib/seguridad';
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const { data: cita, error: errBuscar } = await supabase
       .from('appointments')
       .select(
-        'id, fecha, hora, estado, nombre_cliente, email_cliente, barbers(nombre), services(nombre)'
+        'id, barber_id, fecha, hora, estado, nombre_cliente, email_cliente, barbers(nombre), services(nombre)'
       )
       .eq('cancel_token', token)
       .single();
@@ -66,15 +66,17 @@ export async function POST(request: Request) {
       (cita.barbers as unknown as { nombre: string } | null)?.nombre ?? '—';
     const servicio =
       (cita.services as unknown as { nombre: string } | null)?.nombre ?? '—';
-    const mensaje =
-      `Reserva CANCELADA\n` +
-      `Cliente: ${cita.nombre_cliente}\n` +
-      `Barbero: ${barbero}\n` +
-      `Servicio: ${servicio}\n` +
-      `Fecha: ${fechaBonita(cita.fecha)} a las ${hora12(cita.hora)}`;
-
     await Promise.allSettled([
-      notificarWhatsApp(mensaje),
+      notificarBarbero(cita.barber_id, {
+        asunto: `Cita cancelada - ${fechaBonita(cita.fecha)} ${hora12(cita.hora)}`,
+        titulo: 'Reserva CANCELADA',
+        lineas: [
+          `Cliente: ${cita.nombre_cliente}`,
+          `Barbero: ${barbero}`,
+          `Servicio: ${servicio}`,
+          `Fecha: ${fechaBonita(cita.fecha)} a las ${hora12(cita.hora)}`,
+        ],
+      }),
       enviarCancelacion({
         emailCliente: cita.email_cliente,
         nombreCliente: cita.nombre_cliente,
