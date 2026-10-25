@@ -60,6 +60,12 @@ export default async function AdminPage() {
 
         <div className="flex gap-3 mb-6 flex-wrap">
           <Link
+            href="/admin/cuenta"
+            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+          >
+            Mi cuenta
+          </Link>
+          <Link
             href="/admin/disponibilidad"
             className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
           >

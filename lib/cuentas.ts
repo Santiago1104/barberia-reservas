@@ -1,10 +1,4 @@
-import { randomBytes } from 'crypto';
 import { supabaseAdmin } from './supabase-admin';
-
-// Contraseña temporal legible (12 caracteres) que el dueño entrega al barbero
-export function generarClaveTemporal(): string {
-  return randomBytes(9).toString('base64url');
-}
 
 // Busca un usuario de Supabase Auth por correo (la barbería es pequeña: una página basta)
 export async function buscarUsuarioPorEmail(email: string) {

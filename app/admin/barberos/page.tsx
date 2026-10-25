@@ -12,11 +12,10 @@ type Barbero = {
   email: string | null;
 };
 
-type ClaveEntregada = { nombre: string; email: string; clave: string };
-
 const ERRORES: Record<string, string> = {
   email_repetido: 'Ya existe un barbero con ese correo.',
   email_requerido: 'El correo del barbero es obligatorio y debe ser válido.',
+  clave_debil: 'La contraseña debe tener al menos 10 caracteres, con letras y números.',
   error_crear_cuenta: 'No se pudo crear la cuenta de acceso. Intenta de nuevo.',
 };
 
@@ -29,8 +28,10 @@ export default function BarberosPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
-  const [claveEntregada, setClaveEntregada] = useState<ClaveEntregada | null>(null);
-  const [copiado, setCopiado] = useState(false);
+  const [clave, setClave] = useState('');
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [restableciendo, setRestableciendo] = useState<Barbero | null>(null);
+  const [claveNueva, setClaveNueva] = useState('');
 
   const supabase = crearClienteNavegador();
 
@@ -54,6 +55,10 @@ export default function BarberosPage() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
       setError('El correo del barbero es obligatorio y debe ser válido.');
+      return;
+    }
+    if (clave.length < 10 || !/[A-Za-z]/.test(clave) || !/\d/.test(clave)) {
+      setError(ERRORES.clave_debil);
       return;
     }
     setCargando(true);
@@ -82,7 +87,7 @@ export default function BarberosPage() {
     const res = await fetch('/api/admin/barberos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, descripcion, foto_url, email }),
+      body: JSON.stringify({ nombre, descripcion, foto_url, email, clave }),
     });
     const data = await res.json().catch(() => ({}));
 
@@ -91,41 +96,36 @@ export default function BarberosPage() {
       setError(ERRORES[data.error] ?? 'No se pudo crear el barbero.');
       return;
     }
-    if (data.claveTemporal) {
-      setClaveEntregada({ nombre: nombre.trim(), email: email.trim().toLowerCase(), clave: data.claveTemporal });
-      setCopiado(false);
-    }
+    setAviso(`Barbero creado. Puede entrar con ${email.trim().toLowerCase()} y la contraseña que definiste.`);
     setNombre('');
     setDescripcion('');
     setEmail('');
+    setClave('');
     setArchivo(null);
     setMostrarForm(false);
     cargarBarberos();
   }
 
-  async function restablecerClave(b: Barbero) {
-    const confirmado = window.confirm(
-      `Se generará una contraseña temporal nueva para ${b.nombre}. La anterior dejará de funcionar. ¿Continuar?`
-    );
-    if (!confirmado) return;
-
+  async function guardarClaveNueva() {
+    if (!restableciendo) return;
     setError(null);
     const res = await fetch('/api/admin/barberos/clave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: b.id }),
+      body: JSON.stringify({ id: restableciendo.id, clave: claveNueva }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       setError(
         data.error === 'es_duenio'
-          ? 'La contraseña del dueño la cambia él mismo desde Supabase.'
-          : 'No se pudo restablecer la contraseña.'
+          ? 'El dueño cambia su contraseña desde «Mi cuenta».'
+          : ERRORES[data.error] ?? 'No se pudo cambiar la contraseña.'
       );
       return;
     }
-    setClaveEntregada({ nombre: b.nombre, email: b.email ?? '', clave: data.claveTemporal });
-    setCopiado(false);
+    setAviso(`Contraseña de ${restableciendo.nombre} actualizada.`);
+    setRestableciendo(null);
+    setClaveNueva('');
   }
 
   async function desactivar(id: string, nombreBarbero: string) {
@@ -142,16 +142,6 @@ export default function BarberosPage() {
     if (res.ok) cargarBarberos();
   }
 
-  async function copiarClave() {
-    if (!claveEntregada) return;
-    try {
-      await navigator.clipboard.writeText(claveEntregada.clave);
-      setCopiado(true);
-    } catch {
-      setCopiado(false);
-    }
-  }
-
   return (
     <main className="min-h-screen bg-neutral-950 text-white py-10 px-4">
       <div className="max-w-xl mx-auto">
@@ -162,31 +152,36 @@ export default function BarberosPage() {
           Barberos
         </h1>
 
-        {claveEntregada && (
-          <div className="mb-6 bg-neutral-900 border border-amber-400 rounded-xl p-4">
-            <p className="font-bold text-amber-400 mb-1">Acceso de {claveEntregada.nombre}</p>
-            <p className="text-sm text-neutral-300">Correo: {claveEntregada.email}</p>
-            <p className="text-sm text-neutral-300 mb-2">Contraseña temporal:</p>
-            <div className="flex gap-2 items-center">
-              <code className="flex-1 p-3 rounded-lg bg-neutral-950 border border-neutral-700 text-amber-300 select-all">
-                {claveEntregada.clave}
-              </code>
+        {aviso && <p className="mb-4 text-amber-400 text-sm">{aviso}</p>}
+
+        {restableciendo && (
+          <div className="mb-6 flex flex-col gap-3 bg-neutral-900 border border-amber-400 rounded-xl p-4">
+            <p className="font-bold text-amber-400">Nueva contraseña para {restableciendo.nombre}</p>
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="Mín. 10 caracteres, con letras y números"
+              value={claveNueva}
+              onChange={(e) => setClaveNueva(e.target.value)}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+            />
+            <div className="flex gap-2">
               <button
-                onClick={copiarClave}
-                className="px-4 py-3 rounded-lg border border-neutral-700 text-neutral-200 hover:border-amber-400 transition"
+                onClick={guardarClaveNueva}
+                className="flex-1 py-3 rounded-xl bg-amber-400 text-neutral-950 font-bold hover:bg-amber-300 transition"
               >
-                {copiado ? 'Copiada' : 'Copiar'}
+                Guardar contraseña
+              </button>
+              <button
+                onClick={() => {
+                  setRestableciendo(null);
+                  setClaveNueva('');
+                }}
+                className="px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 hover:border-neutral-500 transition"
+              >
+                Cancelar
               </button>
             </div>
-            <p className="text-xs text-red-400 mt-2">
-              Se muestra solo ahora. Entrégasela al barbero; no se puede volver a ver (solo restablecer).
-            </p>
-            <button
-              onClick={() => setClaveEntregada(null)}
-              className="mt-3 text-sm text-neutral-400 hover:text-white transition"
-            >
-              Ya la entregué, cerrar
-            </button>
           </div>
         )}
 
@@ -221,8 +216,16 @@ export default function BarberosPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
+            <input
+              type="text"
+              autoComplete="off"
+              placeholder="Contraseña del barbero (mín. 10, con letras y números)"
+              value={clave}
+              onChange={(e) => setClave(e.target.value)}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
+            />
             <p className="text-xs text-neutral-500">
-              Se creará su cuenta de acceso con una contraseña temporal que verás una sola vez.
+              Con este correo y contraseña el barbero podrá entrar. Después puede cambiarla desde «Mi cuenta».
             </p>
             <label className="text-sm text-neutral-400">
               Foto del barbero:
@@ -280,10 +283,14 @@ export default function BarberosPage() {
                 <div className="flex flex-col gap-2 shrink-0">
                   {b.email && (
                     <button
-                      onClick={() => restablecerClave(b)}
+                      onClick={() => {
+                        setRestableciendo(b);
+                        setClaveNueva('');
+                        setAviso(null);
+                      }}
                       className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
                     >
-                      Restablecer clave
+                      Cambiar clave
                     </button>
                   )}
                   <button

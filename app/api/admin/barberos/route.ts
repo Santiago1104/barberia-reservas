@@ -1,9 +1,8 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
-import { usuarioAdmin, correosDuenios, REGEX_ID, REGEX_EMAIL } from '@/lib/seguridad';
+import { usuarioAdmin, correosDuenios, claveValida, REGEX_ID, REGEX_EMAIL } from '@/lib/seguridad';
 import {
-  generarClaveTemporal,
   buscarUsuarioPorEmail,
   fijarBloqueoUsuario,
 } from '@/lib/cuentas';
@@ -34,12 +33,12 @@ export async function GET() {
   return NextResponse.json({ barberos: data ?? [] });
 }
 
-// Crear barbero + su cuenta de acceso. Devuelve la contraseña temporal una sola vez.
+// Crear barbero + su cuenta de acceso con la contraseña que elige el dueño
 export async function POST(request: Request) {
   const denegado = await soloDuenio();
   if (denegado) return denegado;
 
-  const { nombre, descripcion, foto_url, email } = await request.json().catch(() => ({}));
+  const { nombre, descripcion, foto_url, email, clave } = await request.json().catch(() => ({}));
   if (typeof nombre !== 'string' || nombre.trim() === '' || nombre.length > 80) {
     return NextResponse.json({ error: 'nombre_requerido' }, { status: 400 });
   }
@@ -64,12 +63,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'email_repetido' }, { status: 409 });
   }
 
-  // Cuenta de acceso: se crea, o se reutiliza si el correo ya tiene cuenta (p. ej. el dueño)
+  // Cuenta de acceso: se crea con la contraseña que elige el dueño, o se reutiliza si el
+  // correo ya tiene cuenta (p. ej. el dueño, que conserva la suya)
   let usuario = await buscarUsuarioPorEmail(correo);
-  let clave: string | null = null;
   let usuarioCreado = false;
+  const reactivar = !!usuario && !!existente && !correosDuenios().includes(correo);
+  if (!usuario || reactivar) {
+    if (typeof clave !== 'string' || !claveValida(clave)) {
+      return NextResponse.json({ error: 'clave_debil' }, { status: 400 });
+    }
+  }
   if (!usuario) {
-    clave = generarClaveTemporal();
     const { data: creado, error: errCrear } = await supabaseAdmin.auth.admin.createUser({
       email: correo,
       password: clave,
@@ -81,9 +85,8 @@ export async function POST(request: Request) {
     }
     usuario = creado.user;
     usuarioCreado = true;
-  } else if (existente && !correosDuenios().includes(correo)) {
-    // Barbero que se reactiva: se restablece el acceso con una clave nueva
-    clave = generarClaveTemporal();
+  } else if (reactivar) {
+    // Barbero que se reactiva: vuelve a tener acceso con la contraseña indicada
     await supabaseAdmin.auth.admin.updateUserById(usuario.id, { password: clave });
     await fijarBloqueoUsuario(usuario.id, false);
   }
@@ -100,7 +103,7 @@ export async function POST(request: Request) {
     if (usuarioCreado) await supabaseAdmin.auth.admin.deleteUser(usuario.id);
     return NextResponse.json({ error: 'error_crear' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, claveTemporal: clave });
+  return NextResponse.json({ ok: true });
 }
 
 // Desactivar barbero y bloquear su acceso

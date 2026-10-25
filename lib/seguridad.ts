@@ -42,6 +42,11 @@ export function excedeLimite(clave: string, maximo: number, ventanaMs: number): 
   return reg.cuenta > maximo;
 }
 
+// Contraseña aceptable: 10 a 72 caracteres, con letras y números
+export function claveValida(clave: string): boolean {
+  return clave.length >= 10 && clave.length <= 72 && /[A-Za-z]/.test(clave) && /\d/.test(clave);
+}
+
 // Correos de los dueños (ADMIN_EMAILS, separados por comas). Si no está definido, nadie es dueño.
 export function correosDuenios(): string[] {
   return (process.env.ADMIN_EMAILS ?? '')
