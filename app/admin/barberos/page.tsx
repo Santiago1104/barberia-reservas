@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { crearClienteNavegador } from '@/lib/supabase-client';
 import BotonVolver from '@/app/components/BotonVolver';
+import SubirFoto from '@/app/components/SubirFoto';
 import { useFeedback } from '@/app/components/Feedback';
 
 type Barbero = {
@@ -26,6 +27,7 @@ export default function BarberosPage() {
   const [descripcion, setDescripcion] = useState('');
   const [email, setEmail] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [fotoActual, setFotoActual] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -57,6 +59,7 @@ export default function BarberosPage() {
     setEmail('');
     setClave('');
     setArchivo(null);
+    setFotoActual(null);
     setError(null);
     setMostrarForm(true);
   }
@@ -66,6 +69,7 @@ export default function BarberosPage() {
     setNombre(b.nombre);
     setDescripcion(b.descripcion ?? '');
     setArchivo(null);
+    setFotoActual(b.foto_url);
     setError(null);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,10 +94,11 @@ export default function BarberosPage() {
     let foto_url: string | null = null;
 
     if (archivo) {
-      const nombreArchivo = `${Date.now()}-${archivo.name.replace(/\s/g, '_')}`;
+      const extension = archivo.type === 'image/png' ? 'png' : 'jpg';
+      const nombreArchivo = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
       const { error: errSubida } = await supabase.storage
         .from('barberos')
-        .upload(nombreArchivo, archivo);
+        .upload(nombreArchivo, archivo, { contentType: archivo.type || 'image/jpeg' });
 
       if (errSubida) {
         setCargando(false);
@@ -267,15 +272,7 @@ export default function BarberosPage() {
             </p>
               </>
             )}
-            <label className="text-sm text-neutral-400">
-              {editandoId ? 'Nueva foto (opcional):' : 'Foto del barbero:'}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-                className="block mt-1 text-neutral-300"
-              />
-            </label>
+            <SubirFoto archivo={archivo} fotoActual={fotoActual} onCambiar={setArchivo} />
             <div className="flex gap-2">
               <button
                 onClick={guardar}
