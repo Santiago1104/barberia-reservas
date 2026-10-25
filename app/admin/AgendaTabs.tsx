@@ -123,8 +123,8 @@ export default function AgendaTabs({
               <div className="text-neutral-300">Barbero: {cita.barbers?.nombre ?? '—'}</div>
               <div className="text-neutral-300">
                 Servicio: {cita.services?.nombre ?? '—'}
-                {cita.services?.precio
-                  ? ` ($${cita.services.precio.toLocaleString('es-CO')})`
+                {(cita.precio ?? cita.services?.precio)
+                  ? ` ($${(cita.precio ?? cita.services!.precio).toLocaleString('es-CO')})`
                   : ''}
               </div>
               <div className="text-neutral-500 text-sm mt-1">

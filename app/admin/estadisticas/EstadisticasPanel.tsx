@@ -44,7 +44,7 @@ export default function EstadisticasPanel({
   const canceladas = enPeriodo.filter((c) => c.estado === 'cancelada');
   const total = confirmadas.length + canceladas.length;
   const porcentajeCancelacion = total > 0 ? Math.round((canceladas.length / total) * 100) : 0;
-  const ingresos = confirmadas.reduce((suma, c) => suma + (c.services?.precio ?? 0), 0);
+  const ingresos = confirmadas.reduce((suma, c) => suma + (c.precio ?? c.services?.precio ?? 0), 0);
 
   const dias: { etiqueta: string; citas: number }[] = [];
   const numDias = periodo === 'hoy' ? 1 : periodo === 'semana' ? 7 : 30;

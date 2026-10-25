@@ -106,6 +106,44 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
+// Editar nombre, descripción y foto (el correo no se cambia: está ligado a su cuenta)
+export async function PUT(request: Request) {
+  const denegado = await soloDuenio();
+  if (denegado) return denegado;
+
+  const { id, nombre, descripcion, foto_url } = await request.json().catch(() => ({}));
+  if (typeof id !== 'string' || !REGEX_ID.test(id)) {
+    return NextResponse.json({ error: 'id_requerido' }, { status: 400 });
+  }
+  if (typeof nombre !== 'string' || nombre.trim() === '' || nombre.length > 80) {
+    return NextResponse.json({ error: 'nombre_requerido' }, { status: 400 });
+  }
+
+  const cambios: Record<string, string | null> = {
+    nombre: nombre.trim(),
+    descripcion:
+      typeof descripcion === 'string' ? descripcion.trim().slice(0, 300) || null : null,
+  };
+  // La foto solo cambia si se envía una nueva
+  if (typeof foto_url === 'string' && /^https:\/\//.test(foto_url)) {
+    cambios.foto_url = foto_url;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('barbers')
+    .update(cambios)
+    .eq('id', id)
+    .eq('activo', true)
+    .select('id');
+  if (error) {
+    return NextResponse.json({ error: 'error_editar' }, { status: 500 });
+  }
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'no_encontrado' }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
 // Desactivar barbero y bloquear su acceso
 export async function PATCH(request: Request) {
   const denegado = await soloDuenio();

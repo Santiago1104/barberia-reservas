@@ -28,6 +28,7 @@ export default function BarberosPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [clave, setClave] = useState('');
   const [aviso, setAviso] = useState<string | null>(null);
   const [restableciendo, setRestableciendo] = useState<Barbero | null>(null);
@@ -48,16 +49,39 @@ export default function BarberosPage() {
       .then((data) => data && setBarberos(data.barberos as Barbero[]));
   }, []);
 
-  async function crear() {
+  function abrirNuevo() {
+    setEditandoId(null);
+    setNombre('');
+    setDescripcion('');
+    setEmail('');
+    setClave('');
+    setArchivo(null);
+    setError(null);
+    setAviso(null);
+    setMostrarForm(true);
+  }
+
+  function abrirEdicion(b: Barbero) {
+    setEditandoId(b.id);
+    setNombre(b.nombre);
+    setDescripcion(b.descripcion ?? '');
+    setArchivo(null);
+    setError(null);
+    setAviso(null);
+    setMostrarForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function guardar() {
     if (nombre.trim() === '') {
       setError('El nombre es obligatorio.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
+    if (!editandoId && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) {
       setError('El correo del barbero es obligatorio y debe ser válido.');
       return;
     }
-    if (clave.length < 10 || !/[A-Za-z]/.test(clave) || !/\d/.test(clave)) {
+    if (!editandoId && (clave.length < 10 || !/[A-Za-z]/.test(clave) || !/\d/.test(clave))) {
       setError(ERRORES.clave_debil);
       return;
     }
@@ -85,18 +109,23 @@ export default function BarberosPage() {
     }
 
     const res = await fetch('/api/admin/barberos', {
-      method: 'POST',
+      method: editandoId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, descripcion, foto_url, email, clave }),
+      body: JSON.stringify({ id: editandoId, nombre, descripcion, foto_url, email, clave }),
     });
     const data = await res.json().catch(() => ({}));
 
     setCargando(false);
     if (!res.ok) {
-      setError(ERRORES[data.error] ?? 'No se pudo crear el barbero.');
+      setError(ERRORES[data.error] ?? 'No se pudo guardar el barbero.');
       return;
     }
-    setAviso(`Barbero creado. Puede entrar con ${email.trim().toLowerCase()} y la contraseña que definiste.`);
+    setAviso(
+      editandoId
+        ? 'Cambios guardados.'
+        : `Barbero creado. Puede entrar con ${email.trim().toLowerCase()} y la contraseña que definiste.`
+    );
+    setEditandoId(null);
     setNombre('');
     setDescripcion('');
     setEmail('');
@@ -187,7 +216,7 @@ export default function BarberosPage() {
 
         {!mostrarForm && (
           <button
-            onClick={() => setMostrarForm(true)}
+            onClick={abrirNuevo}
             className="mb-6 px-5 py-3 rounded-xl border border-amber-400 text-amber-400 font-bold hover:bg-amber-400 hover:text-neutral-950 transition"
           >
             + Nuevo barbero
@@ -209,6 +238,12 @@ export default function BarberosPage() {
               rows={2}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none resize-y"
             />
+            {editandoId ? (
+              <p className="text-xs text-neutral-500">
+                El correo no se puede cambiar. Si quiere otra contraseña, usa «Cambiar clave».
+              </p>
+            ) : (
+              <>
             <input
               type="email"
               placeholder="Correo del barbero (obligatorio: login y avisos de reservas)"
@@ -227,8 +262,10 @@ export default function BarberosPage() {
             <p className="text-xs text-neutral-500">
               Con este correo y contraseña el barbero podrá entrar. Después puede cambiarla desde «Mi cuenta».
             </p>
+              </>
+            )}
             <label className="text-sm text-neutral-400">
-              Foto del barbero:
+              {editandoId ? 'Nueva foto (opcional):' : 'Foto del barbero:'}
               <input
                 type="file"
                 accept="image/*"
@@ -238,14 +275,17 @@ export default function BarberosPage() {
             </label>
             <div className="flex gap-2">
               <button
-                onClick={crear}
+                onClick={guardar}
                 disabled={cargando}
                 className="flex-1 py-3 rounded-xl bg-amber-400 text-neutral-950 font-bold hover:bg-amber-300 transition disabled:opacity-60"
               >
-                {cargando ? 'Guardando...' : 'Agregar barbero'}
+                {cargando ? 'Guardando...' : editandoId ? 'Guardar cambios' : 'Agregar barbero'}
               </button>
               <button
-                onClick={() => setMostrarForm(false)}
+                onClick={() => {
+                  setMostrarForm(false);
+                  setEditandoId(null);
+                }}
                 className="px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 hover:border-neutral-500 transition"
               >
                 Cancelar
@@ -281,6 +321,12 @@ export default function BarberosPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    onClick={() => abrirEdicion(b)}
+                    className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+                  >
+                    Editar
+                  </button>
                   {b.email && (
                     <button
                       onClick={() => {

@@ -15,6 +15,7 @@ export type Cita = {
   telefono_cliente: string;
   email_cliente: string;
   estado: string;
+  precio: number | null;
   barbers: { nombre: string } | null;
   services: { nombre: string; precio: number } | null;
 };
@@ -36,7 +37,7 @@ export default async function AdminPage() {
     ? await supabaseAdmin
         .from('appointments')
         .select(
-          'id, fecha, hora, barber_id, nombre_cliente, telefono_cliente, email_cliente, estado, barbers(nombre), services(nombre, precio)'
+          'id, fecha, hora, barber_id, nombre_cliente, telefono_cliente, email_cliente, estado, precio, barbers(nombre), services(nombre, precio)'
         )
         .eq('estado', 'confirmada')
         .in('barber_id', ids)

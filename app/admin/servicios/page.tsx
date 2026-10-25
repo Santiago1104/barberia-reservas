@@ -20,6 +20,7 @@ export default function ServiciosPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
 
   const supabase = crearClienteNavegador();
 
@@ -33,10 +34,34 @@ export default function ServiciosPage() {
   }
 
   useEffect(() => {
-    cargarServicios();
+    crearClienteNavegador()
+      .from('services')
+      .select('id, nombre, descripcion, precio, activo')
+      .eq('activo', true)
+      .order('nombre')
+      .then(({ data }) => setServicios((data ?? []) as Servicio[]));
   }, []);
 
-  async function crear() {
+  function abrirNuevo() {
+    setEditandoId(null);
+    setNombre('');
+    setDescripcion('');
+    setPrecio('');
+    setError(null);
+    setMostrarForm(true);
+  }
+
+  function abrirEdicion(s: Servicio) {
+    setEditandoId(s.id);
+    setNombre(s.nombre);
+    setDescripcion(s.descripcion ?? '');
+    setPrecio(String(s.precio));
+    setError(null);
+    setMostrarForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function guardar() {
     if (nombre.trim() === '' || precio.trim() === '') {
       setError('Nombre y precio son obligatorios.');
       return;
@@ -45,19 +70,24 @@ export default function ServiciosPage() {
     setError(null);
 
     const res = await fetch('/api/admin/servicios', {
-      method: 'POST',
+      method: editandoId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, descripcion, precio }),
+      body: JSON.stringify({ id: editandoId, nombre, descripcion, precio }),
     });
 
     setCargando(false);
     if (!res.ok) {
-      setError('No se pudo crear el servicio. Revisa el precio.');
+      setError(
+        editandoId
+          ? 'No se pudo guardar el cambio. Revisa el precio.'
+          : 'No se pudo crear el servicio. Revisa el precio.'
+      );
       return;
     }
     setNombre('');
     setDescripcion('');
     setPrecio('');
+    setEditandoId(null);
     setMostrarForm(false);
     cargarServicios();
   }
@@ -88,7 +118,7 @@ export default function ServiciosPage() {
 
         {!mostrarForm && (
           <button
-            onClick={() => setMostrarForm(true)}
+            onClick={abrirNuevo}
             className="mb-6 px-5 py-3 rounded-xl border border-amber-400 text-amber-400 font-bold hover:bg-amber-400 hover:text-neutral-950 transition"
           >
             + Nuevo servicio
@@ -97,6 +127,7 @@ export default function ServiciosPage() {
 
         {mostrarForm && (
           <div className="flex flex-col gap-3 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            {editandoId && <p className="font-bold text-amber-400">Editando servicio</p>}
             <input
               placeholder="Nombre del servicio"
               value={nombre}
@@ -118,14 +149,17 @@ export default function ServiciosPage() {
             />
             <div className="flex gap-2">
               <button
-                onClick={crear}
+                onClick={guardar}
                 disabled={cargando}
                 className="flex-1 py-3 rounded-xl bg-amber-400 text-neutral-950 font-bold hover:bg-amber-300 transition disabled:opacity-60"
               >
-                {cargando ? 'Agregando...' : 'Agregar servicio'}
+                {cargando ? 'Guardando...' : editandoId ? 'Guardar cambios' : 'Agregar servicio'}
               </button>
               <button
-                onClick={() => setMostrarForm(false)}
+                onClick={() => {
+                  setMostrarForm(false);
+                  setEditandoId(null);
+                }}
                 className="px-4 py-3 rounded-xl border border-neutral-700 text-neutral-300 hover:border-neutral-500 transition"
               >
                 Cancelar
@@ -149,12 +183,20 @@ export default function ServiciosPage() {
                   {s.descripcion && <div className="text-sm text-neutral-400">{s.descripcion}</div>}
                   <div className="text-amber-400">${s.precio.toLocaleString('es-CO')}</div>
                 </div>
-                <button
-                  onClick={() => desactivar(s.id, s.nombre)}
-                  className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition shrink-0"
-                >
-                  Desactivar
-                </button>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    onClick={() => abrirEdicion(s)}
+                    className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => desactivar(s.id, s.nombre)}
+                    className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition"
+                  >
+                    Desactivar
+                  </button>
+                </div>
               </div>
             ))
           )}

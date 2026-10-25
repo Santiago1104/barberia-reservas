@@ -6,6 +6,7 @@ export type CitaStat = {
   fecha: string;
   estado: string;
   barber_id: string;
+  precio: number | null;
   services: { precio: number } | null;
 };
 
@@ -17,7 +18,7 @@ export default async function EstadisticasPage() {
 
   const { data: citas } = await supabase
     .from('appointments')
-    .select('fecha, estado, barber_id, services(precio)')
+    .select('fecha, estado, barber_id, precio, services(precio)')
     .order('fecha', { ascending: true });
 
   const { data: barberos } = await supabase

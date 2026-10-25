@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     // Los nombres salen de la base de datos, no del cliente (evita falsificarlos)
     const [{ data: barbero }, { data: servicio }] = await Promise.all([
       supabase.from('barbers').select('nombre').eq('id', barber_id).eq('activo', true).maybeSingle(),
-      supabase.from('services').select('nombre').eq('id', service_id).eq('activo', true).maybeSingle(),
+      supabase.from('services').select('nombre, precio').eq('id', service_id).eq('activo', true).maybeSingle(),
     ]);
     if (!barbero || !servicio) {
       console.warn('Reserva rechazada: barbero o servicio no encontrado/activo', { barber_id, service_id });
@@ -94,6 +94,7 @@ export async function POST(request: Request) {
         nombre_cliente,
         telefono_cliente,
         email_cliente,
+        precio: servicio.precio,
       })
       .select('cancel_token')
       .single();
