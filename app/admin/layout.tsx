@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import Link from 'next/link';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { esAdmin } from '@/lib/seguridad';
+import { barberosPermitidos } from '@/lib/permisos';
 import AdminNav, { type EnlaceAdmin } from './AdminNav';
-import BotonSalir from './BotonSalir';
+import MenuCuenta from './MenuCuenta';
 import FeedbackProvider from '@/app/components/Feedback';
 
 // El panel se puede instalar en el celular como app (PWA). El manifiesto solo se ofrece aquí,
@@ -18,12 +18,17 @@ export const viewport: Viewport = {
   themeColor: '#0a0a0a',
 };
 
-// Marco común del panel: cabecera fija con navegación, usuario y salida
+// Marco común del panel: cabecera fija con navegación y menú de la cuenta
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await crearClienteServidor();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const email = user?.email ?? '';
+  // Se muestra el nombre del barbero (si la cuenta está ligada a uno) en lugar del correo cortado
+  const barberos = user ? await barberosPermitidos(user) : [];
+  const nombre = barberos.find((b) => b.propio)?.nombre ?? email.split('@')[0] ?? 'Mi cuenta';
 
   const enlaces: EnlaceAdmin[] = [
     { href: '/admin', texto: 'Agenda' },
@@ -54,17 +59,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <div className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-lg font-bold text-amber-400 leading-tight">
                 Panel
               </div>
-              <div className="text-xs text-neutral-400 truncate">{user?.email}</div>
+              <div className="text-xs text-neutral-400 truncate">{nombre}</div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Link
-                href="/admin/cuenta"
-                className="presionable inline-flex items-center min-h-10 px-4 rounded-full border border-neutral-700 text-sm text-neutral-300 hover:border-amber-400 hover:text-amber-400"
-              >
-                Mi cuenta
-              </Link>
-              <BotonSalir />
-            </div>
+            <MenuCuenta nombre={nombre} email={email} />
           </div>
           <AdminNav enlaces={enlaces} />
         </div>
