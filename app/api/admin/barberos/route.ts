@@ -2,6 +2,7 @@ import { crearClienteServidor } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 import { usuarioAdmin, correosDuenios, claveValida, REGEX_ID, REGEX_EMAIL } from '@/lib/seguridad';
+import { HORARIO_INICIAL, DIAS_INICIALES } from '@/lib/config-reservas';
 import {
   buscarUsuarioPorEmail,
   fijarBloqueoUsuario,
@@ -96,7 +97,27 @@ export async function POST(request: Request) {
         .from('barbers')
         .update({ ...datos, email: correo, user_id: usuario.id, activo: true })
         .eq('id', existente.id)
-    : await supabaseAdmin.from('barbers').insert({ ...datos, email: correo, user_id: usuario.id });
+    : await supabaseAdmin
+        .from('barbers')
+        .insert({ ...datos, email: correo, user_id: usuario.id })
+        .select('id')
+        .single()
+        .then(async (r) => {
+          // Horario inicial (lunes a sábado); el dueño lo ajusta en /admin/horarios
+          if (!r.error && r.data) {
+            await supabaseAdmin.from('horarios').insert(
+              DIAS_INICIALES.flatMap((dia) =>
+                HORARIO_INICIAL.map((t) => ({
+                  barber_id: r.data.id,
+                  dia_semana: dia,
+                  hora_inicio: t.inicio,
+                  hora_fin: t.fin,
+                }))
+              )
+            );
+          }
+          return r;
+        });
 
   if (error) {
     console.error('Error al guardar barbero:', error);

@@ -3,7 +3,9 @@ import { NextResponse } from 'next/server';
 import { enviarConfirmacion } from '@/lib/email';
 import { hora12, fechaBonita } from '@/lib/formato';
 import { notificarBarbero } from '@/lib/notificar';
-import { HORARIO, DIAS_ANTICIPACION } from '@/lib/config-reservas';
+import { DIAS_ANTICIPACION } from '@/lib/config-reservas';
+import { cargarDia } from '@/lib/agenda';
+import { horasLibres } from '@/lib/disponibilidad';
 import { hoyColombia, momentoCita } from '@/lib/tiempo';
 import {
   REGEX_ID,
@@ -44,7 +46,7 @@ export async function POST(request: Request) {
     if (!REGEX_ID.test(barber_id)) campos.push('barber_id');
     if (!REGEX_ID.test(service_id)) campos.push('service_id');
     if (!REGEX_FECHA.test(fecha)) campos.push('fecha');
-    if (!HORARIO.includes(hora)) campos.push('hora');
+    if (!/^\d{2}:\d{2}$/.test(hora)) campos.push('hora');
     if (nombre_cliente.length < 2) campos.push('nombre');
     if (!/^[+\d][\d\s().-]{6,19}$/.test(telefono_cliente)) campos.push('telefono');
     if (!REGEX_EMAIL.test(email_cliente)) campos.push('email');
@@ -64,22 +66,27 @@ export async function POST(request: Request) {
     // Los nombres salen de la base de datos, no del cliente (evita falsificarlos)
     const [{ data: barbero }, { data: servicio }] = await Promise.all([
       supabase.from('barbers').select('nombre').eq('id', barber_id).eq('activo', true).maybeSingle(),
-      supabase.from('services').select('nombre, precio').eq('id', service_id).eq('activo', true).maybeSingle(),
+      supabase.from('services').select('nombre, precio, duracion_min').eq('id', service_id).eq('activo', true).maybeSingle(),
     ]);
     if (!barbero || !servicio) {
       console.warn('Reserva rechazada: barbero o servicio no encontrado/activo', { barber_id, service_id });
       return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 });
     }
 
-    // Franja bloqueada por el barbero
-    const { data: bloqueada } = await supabase
-      .from('bloqueos')
-      .select('id')
-      .eq('barber_id', barber_id)
-      .eq('fecha', fecha)
-      .eq('hora', hora)
-      .maybeSingle();
-    if (bloqueada) {
+    // La hora debe estar dentro del horario del barbero y libre para la duración del servicio
+    const duracion: number = servicio.duracion_min ?? 60;
+    const dia = await cargarDia(barber_id, fecha);
+    if (!dia) {
+      return NextResponse.json({ error: 'error_guardado' }, { status: 500 });
+    }
+    const libres = horasLibres({
+      fecha,
+      rangos: dia.rangos,
+      duracion,
+      citas: dia.citas,
+      bloqueos: dia.bloqueos,
+    });
+    if (!libres.includes(hora)) {
       return NextResponse.json({ error: 'slot_ocupado' }, { status: 409 });
     }
 
@@ -95,13 +102,19 @@ export async function POST(request: Request) {
         telefono_cliente,
         email_cliente,
         precio: servicio.precio,
+        duracion_min: duracion,
       })
       .select('cancel_token')
       .single();
 
     if (error) {
       // Slot ya ocupado
-      if (error.code === '23505' || error.message?.includes('franja_bloqueada')) {
+      // 23505: misma hora exacta; 23P01: se solapa con otra cita; franja_bloqueada: trigger
+      if (
+        error.code === '23505' ||
+        error.code === '23P01' ||
+        error.message?.includes('franja_bloqueada')
+      ) {
         return NextResponse.json({ error: 'slot_ocupado' }, { status: 409 });
       }
       console.error('Error al guardar:', error);

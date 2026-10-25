@@ -16,6 +16,7 @@ export type Cita = {
   email_cliente: string;
   estado: string;
   precio: number | null;
+  duracion_min: number | null;
   barbers: { nombre: string } | null;
   services: { nombre: string; precio: number } | null;
 };
@@ -37,7 +38,7 @@ export default async function AdminPage() {
     ? await supabaseAdmin
         .from('appointments')
         .select(
-          'id, fecha, hora, barber_id, nombre_cliente, telefono_cliente, email_cliente, estado, precio, barbers(nombre), services(nombre, precio)'
+          'id, fecha, hora, barber_id, nombre_cliente, telefono_cliente, email_cliente, estado, precio, duracion_min, barbers(nombre), services(nombre, precio)'
         )
         .eq('estado', 'confirmada')
         .in('barber_id', ids)
@@ -65,6 +66,12 @@ export default async function AdminPage() {
             className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
           >
             Mi cuenta
+          </Link>
+          <Link
+            href="/admin/horarios"
+            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+          >
+            Horarios
           </Link>
           <Link
             href="/admin/disponibilidad"

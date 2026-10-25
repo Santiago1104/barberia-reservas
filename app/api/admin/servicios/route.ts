@@ -2,6 +2,7 @@ import { crearClienteServidor } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { NextResponse } from 'next/server';
 import { usuarioAdmin, REGEX_ID } from '@/lib/seguridad';
+import { DURACION_MIN, DURACION_MAX, DURACION_PASO } from '@/lib/config-reservas';
 
 // Solo el dueño gestiona servicios. Las escrituras van con la service role porque
 // las políticas RLS ya no permiten escribir a usuarios autenticados.
@@ -14,11 +15,11 @@ async function soloDuenio(): Promise<NextResponse | null> {
   return null;
 }
 
-type Campos = { nombre: string; descripcion: string | null; precio: number };
+type Campos = { nombre: string; descripcion: string | null; precio: number; duracion_min: number };
 
 // Valida y normaliza nombre, descripción y precio
 function leerCampos(cuerpo: Record<string, unknown>): Campos | NextResponse {
-  const { nombre, descripcion, precio } = cuerpo;
+  const { nombre, descripcion, precio, duracion_min } = cuerpo;
   if (typeof nombre !== 'string' || nombre.trim() === '' || nombre.length > 80) {
     return NextResponse.json({ error: 'nombre_requerido' }, { status: 400 });
   }
@@ -26,10 +27,20 @@ function leerCampos(cuerpo: Record<string, unknown>): Campos | NextResponse {
   if (!Number.isFinite(precioNum) || precioNum < 0 || precioNum > 10000000) {
     return NextResponse.json({ error: 'precio_invalido' }, { status: 400 });
   }
+  const duracion = Number(duracion_min);
+  if (
+    !Number.isInteger(duracion) ||
+    duracion < DURACION_MIN ||
+    duracion > DURACION_MAX ||
+    duracion % DURACION_PASO !== 0
+  ) {
+    return NextResponse.json({ error: 'duracion_invalida' }, { status: 400 });
+  }
   return {
     nombre: nombre.trim(),
     descripcion: typeof descripcion === 'string' ? descripcion.trim().slice(0, 300) || null : null,
     precio: precioNum,
+    duracion_min: duracion,
   };
 }
 
@@ -48,7 +59,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// Editar servicio (las citas ya hechas conservan el precio con que se reservaron)
+// Editar servicio (las citas ya hechas conservan el precio y la duración con que se reservaron)
 export async function PUT(request: Request) {
   const denegado = await soloDuenio();
   if (denegado) return denegado;

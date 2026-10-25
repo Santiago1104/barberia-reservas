@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { hora12, fechaBonita } from '@/lib/formato';
-import { HORARIO, DIAS_ANTICIPACION } from '@/lib/config-reservas';
+import { DIAS_ANTICIPACION } from '@/lib/config-reservas';
 
 
 type Barber = {
@@ -19,6 +19,7 @@ type Service = {
   nombre: string;
   descripcion: string | null;
   precio: number;
+  duracion_min: number;
 };
 
 
@@ -59,7 +60,7 @@ export default function ReservaFlow({
   const [servicioElegido, setServicioElegido] = useState<Service | null>(null);
   const [diaElegido, setDiaElegido] = useState<string | null>(null);
   const [horaElegida, setHoraElegida] = useState<string | null>(null);
-  const [horasOcupadas, setHorasOcupadas] = useState<string[]>([]);
+  const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
   const [cargandoHoras, setCargandoHoras] = useState(false);
 
   const [nombre, setNombre] = useState('');
@@ -76,25 +77,26 @@ export default function ReservaFlow({
   const refDatos = useRef<HTMLDivElement>(null);
   const dias = generarDias();
 
+  // Las horas disponibles dependen del barbero, del servicio (duración) y del día
   useEffect(() => {
-    async function cargarHorasOcupadas() {
-      if (!barberoElegido || !diaElegido) return;
+    async function cargarHoras() {
+      if (!barberoElegido || !servicioElegido || !diaElegido) return;
       setCargandoHoras(true);
       setHoraElegida(null);
 
       try {
         const res = await fetch(
-          `/api/disponibilidad?barber_id=${barberoElegido.id}&fecha=${diaElegido}`
+          `/api/disponibilidad?barber_id=${barberoElegido.id}&service_id=${servicioElegido.id}&fecha=${diaElegido}`
         );
         const data = await res.json();
-        setHorasOcupadas(data.horasOcupadas ?? []);
+        setHorasDisponibles(data.horas ?? []);
       } catch {
-        setHorasOcupadas([]);
+        setHorasDisponibles([]);
       }
       setCargandoHoras(false);
     }
-    cargarHorasOcupadas();
-  }, [barberoElegido, diaElegido]);
+    cargarHoras();
+  }, [barberoElegido, servicioElegido, diaElegido]);
 
     // Scroll automático al siguiente paso cuando se elige una opción
   useEffect(() => {
@@ -112,19 +114,6 @@ export default function ReservaFlow({
   useEffect(() => {
     if (horaElegida) refDatos.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [horaElegida]);
-  const hoyTexto = aTextoFecha(new Date());
-  const ahora = new Date();
-
-  const horasLibres = HORARIO.filter((hora) => {
-    if (horasOcupadas.includes(hora)) return false;
-    if (diaElegido === hoyTexto) {
-      const [h, m] = hora.split(':').map(Number);
-      const horaSlot = new Date();
-      horaSlot.setHours(h, m, 0, 0);
-      if (horaSlot <= ahora) return false;
-    }
-    return true;
-  });
 
   function emailValido(correo: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
@@ -163,7 +152,7 @@ export default function ReservaFlow({
       if (!res.ok) {
         if (resultado.error === 'slot_ocupado') {
           setErrorGuardado('Esa hora acaba de ser reservada por alguien más. Por favor elige otra.');
-          setHorasOcupadas((prev) => [...prev, horaElegida]);
+          setHorasDisponibles((prev) => prev.filter((h) => h !== horaElegida));
           setHoraElegida(null);
         } else if (resultado.error === 'demasiados_intentos') {
           setErrorGuardado('Has hecho demasiados intentos. Espera unos minutos e intenta de nuevo.');
@@ -189,7 +178,7 @@ export default function ReservaFlow({
     setServicioElegido(null);
     setDiaElegido(null);
     setHoraElegida(null);
-    setHorasOcupadas([]);
+    setHorasDisponibles([]);
     setNombre('');
     setTelefono('');
     setEmail('');
@@ -338,7 +327,10 @@ export default function ReservaFlow({
                 >
                   <div className="font-bold">{s.nombre}</div>
                   {s.descripcion && <div className="text-sm text-neutral-400">{s.descripcion}</div>}
-                  <div className="text-amber-400 mt-1">${s.precio.toLocaleString('es-CO')}</div>
+                  <div className="text-amber-400 mt-1">
+                    ${s.precio.toLocaleString('es-CO')}
+                    <span className="text-neutral-500"> · {s.duracion_min} min</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -380,11 +372,11 @@ export default function ReservaFlow({
             </h2>
             {cargandoHoras ? (
               <p className="text-neutral-400">Cargando horas disponibles...</p>
-            ) : horasLibres.length === 0 ? (
+            ) : horasDisponibles.length === 0 ? (
               <p className="text-neutral-400">No hay horas disponibles este día. Prueba con otro.</p>
             ) : (
               <div className="flex flex-wrap gap-3">
-                {horasLibres.map((hora) => (
+                {horasDisponibles.map((hora) => (
                   <button
                     key={hora}
                     onClick={() => setHoraElegida(hora)}

@@ -12,6 +12,13 @@ function fechaHoraDe(cita: Cita): Date {
   return new Date(año, mes - 1, dia, h, m, 0, 0);
 }
 
+// Hora en que termina la cita
+function finDe(cita: Cita): string {
+  const [h, m] = cita.hora.split(':').map(Number);
+  const total = h * 60 + m + (cita.duracion_min ?? 60);
+  return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
 function esMismoDia(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -117,7 +124,7 @@ export default function AgendaTabs({
               }`}
             >
               <div className="font-bold text-amber-400">
-                {fechaBonita(cita.fecha)} — {hora12(cita.hora)}
+                {fechaBonita(cita.fecha)} — {hora12(cita.hora)}{cita.duracion_min ? ` a ${hora12(finDe(cita))}` : ''}
               </div>
               <div className="mt-1">Cliente: {cita.nombre_cliente}</div>
               <div className="text-neutral-300">Barbero: {cita.barbers?.nombre ?? '—'}</div>

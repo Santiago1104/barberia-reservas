@@ -9,6 +9,7 @@ type Servicio = {
   nombre: string;
   descripcion: string | null;
   precio: number;
+  duracion_min: number;
   activo: boolean;
 };
 
@@ -17,6 +18,7 @@ export default function ServiciosPage() {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [precio, setPrecio] = useState('');
+  const [duracion, setDuracion] = useState('60');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -27,7 +29,7 @@ export default function ServiciosPage() {
   async function cargarServicios() {
     const { data } = await supabase
       .from('services')
-      .select('id, nombre, descripcion, precio, activo')
+      .select('id, nombre, descripcion, precio, duracion_min, activo')
       .eq('activo', true)
       .order('nombre');
     setServicios((data ?? []) as Servicio[]);
@@ -36,7 +38,7 @@ export default function ServiciosPage() {
   useEffect(() => {
     crearClienteNavegador()
       .from('services')
-      .select('id, nombre, descripcion, precio, activo')
+      .select('id, nombre, descripcion, precio, duracion_min, activo')
       .eq('activo', true)
       .order('nombre')
       .then(({ data }) => setServicios((data ?? []) as Servicio[]));
@@ -47,6 +49,7 @@ export default function ServiciosPage() {
     setNombre('');
     setDescripcion('');
     setPrecio('');
+    setDuracion('60');
     setError(null);
     setMostrarForm(true);
   }
@@ -56,6 +59,7 @@ export default function ServiciosPage() {
     setNombre(s.nombre);
     setDescripcion(s.descripcion ?? '');
     setPrecio(String(s.precio));
+    setDuracion(String(s.duracion_min));
     setError(null);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -66,13 +70,18 @@ export default function ServiciosPage() {
       setError('Nombre y precio son obligatorios.');
       return;
     }
+    const min = Number(duracion);
+    if (!Number.isInteger(min) || min < 10 || min > 240 || min % 5 !== 0) {
+      setError('La duración debe estar entre 10 y 240 minutos, de 5 en 5.');
+      return;
+    }
     setCargando(true);
     setError(null);
 
     const res = await fetch('/api/admin/servicios', {
       method: editandoId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: editandoId, nombre, descripcion, precio }),
+      body: JSON.stringify({ id: editandoId, nombre, descripcion, precio, duracion_min: Number(duracion) }),
     });
 
     setCargando(false);
@@ -87,6 +96,7 @@ export default function ServiciosPage() {
     setNombre('');
     setDescripcion('');
     setPrecio('');
+    setDuracion('60');
     setEditandoId(null);
     setMostrarForm(false);
     cargarServicios();
@@ -147,6 +157,18 @@ export default function ServiciosPage() {
               inputMode="numeric"
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
+            <label className="text-sm text-neutral-400">
+              Duración en minutos (de 10 a 240, de 5 en 5):
+              <input
+                type="number"
+                min={10}
+                max={240}
+                step={5}
+                value={duracion}
+                onChange={(e) => setDuracion(e.target.value)}
+                className="mt-1 w-full p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white focus:border-amber-400 focus:outline-none"
+              />
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={guardar}
@@ -181,7 +203,10 @@ export default function ServiciosPage() {
                 <div>
                   <div className="font-bold">{s.nombre}</div>
                   {s.descripcion && <div className="text-sm text-neutral-400">{s.descripcion}</div>}
-                  <div className="text-amber-400">${s.precio.toLocaleString('es-CO')}</div>
+                  <div className="text-amber-400">
+                    ${s.precio.toLocaleString('es-CO')}
+                    <span className="text-neutral-500"> · {s.duracion_min} min</span>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
                   <button

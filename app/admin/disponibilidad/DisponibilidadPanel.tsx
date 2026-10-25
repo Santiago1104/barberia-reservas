@@ -7,6 +7,7 @@ type Franja = {
   hora: string;
   estado: 'libre' | 'bloqueada' | 'reservada' | 'pasada';
   cliente?: string;
+  inicio?: boolean;
 };
 
 type Barbero = { id: string; nombre: string };
@@ -143,6 +144,9 @@ export default function DisponibilidadPanel({
         <p className="text-neutral-500 text-xs mt-1">{fechaBonita(fecha)}</p>
       </div>
 
+      <p className="text-neutral-500 text-xs mb-3">
+        Toca una franja de 30 minutos para bloquearla o liberarla.
+      </p>
       <div className="flex gap-2 mb-4 flex-wrap">
         <button
           onClick={() => bloquear(bloqueables)}
@@ -166,19 +170,24 @@ export default function DisponibilidadPanel({
       {cargando ? (
         <p className="text-neutral-400">Cargando...</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2">
+          {franjas.length === 0 && (
+            <p className="col-span-3 text-neutral-400">
+              Este día no hay horario de trabajo. Se define en «Horarios».
+            </p>
+          )}
           {franjas.map((f) => (
             <button
               key={f.hora}
               onClick={() => tocar(f)}
               disabled={f.estado === 'pasada'}
-              className={`p-4 rounded-xl border text-left transition ${estilos[f.estado]}`}
+              className={`p-3 rounded-xl border text-left transition ${estilos[f.estado]}`}
             >
               <div className="font-bold">{hora12(f.hora)}</div>
               <div className="text-xs mt-1">
-                {f.estado === 'libre' && 'Libre · toca para bloquear'}
-                {f.estado === 'bloqueada' && 'Bloqueada · toca para liberar'}
-                {f.estado === 'reservada' && `Reservada: ${f.cliente}`}
+                {f.estado === 'libre' && 'Libre'}
+                {f.estado === 'bloqueada' && 'Bloqueada'}
+                {f.estado === 'reservada' && (f.inicio ? `Cita: ${f.cliente}` : `↳ ${f.cliente}`)}
                 {f.estado === 'pasada' && 'Ya pasó'}
               </div>
             </button>
