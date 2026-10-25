@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { crearClienteNavegador } from '@/lib/supabase-client';
 import BotonVolver from '@/app/components/BotonVolver';
+import { useFeedback } from '@/app/components/Feedback';
 
 type Servicio = {
   id: string;
@@ -24,6 +25,7 @@ export default function ServiciosPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
 
+  const { avisar, confirmar } = useFeedback();
   const supabase = crearClienteNavegador();
 
   async function cargarServicios() {
@@ -97,15 +99,19 @@ export default function ServiciosPage() {
     setDescripcion('');
     setPrecio('');
     setDuracion('60');
+    avisar(editandoId ? 'Cambios guardados.' : 'Servicio creado.');
     setEditandoId(null);
     setMostrarForm(false);
     cargarServicios();
   }
 
   async function desactivar(id: string, nombreServicio: string) {
-    const confirmado = window.confirm(
-      `¿Seguro que quieres desactivar "${nombreServicio}"? Dejará de aparecer en las reservas.`
-    );
+    const confirmado = await confirmar({
+      titulo: `Desactivar «${nombreServicio}»`,
+      mensaje: 'Dejará de aparecer en las reservas. Las citas ya agendadas no cambian.',
+      confirmar: 'Desactivar',
+      peligro: true,
+    });
     if (!confirmado) return;
 
     const res = await fetch('/api/admin/servicios', {
@@ -113,7 +119,12 @@ export default function ServiciosPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    if (res.ok) cargarServicios();
+    if (res.ok) {
+      avisar(`«${nombreServicio}» fue desactivado.`);
+      cargarServicios();
+    } else {
+      avisar('No se pudo desactivar. Intenta de nuevo.', 'error');
+    }
   }
 
   return (
@@ -137,19 +148,19 @@ export default function ServiciosPage() {
           <div className="flex flex-col gap-3 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-4">
             {editandoId && <p className="font-bold text-amber-400">Editando servicio</p>}
             <input
-              placeholder="Nombre del servicio"
+              aria-label="Nombre del servicio" placeholder="Nombre del servicio"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
             <input
-              placeholder="Descripción (opcional)"
+              aria-label="Descripción (opcional)" placeholder="Descripción (opcional)"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
             <input
-              placeholder="Precio (ej. 25000)"
+              aria-label="Precio (ej. 25000)" placeholder="Precio (ej. 25000)"
               value={precio}
               onChange={(e) => setPrecio(e.target.value)}
               inputMode="numeric"
@@ -203,19 +214,19 @@ export default function ServiciosPage() {
                   {s.descripcion && <div className="text-sm text-neutral-400">{s.descripcion}</div>}
                   <div className="text-amber-400">
                     ${s.precio.toLocaleString('es-CO')}
-                    <span className="text-neutral-500"> · {s.duracion_min} min</span>
+                    <span className="text-neutral-400"> · {s.duracion_min} min</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">
                   <button
                     onClick={() => abrirEdicion(s)}
-                    className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+                    className="text-sm min-h-10 px-3 rounded-lg inline-flex items-center justify-center border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => desactivar(s.id, s.nombre)}
-                    className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition"
+                    className="text-sm min-h-10 px-3 rounded-lg inline-flex items-center justify-center border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition"
                   >
                     Desactivar
                   </button>

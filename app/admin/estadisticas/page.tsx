@@ -1,6 +1,10 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { crearClienteServidor } from '@/lib/supabase-server';
+import { barberosPermitidos } from '@/lib/permisos';
 import EstadisticasPanel from './EstadisticasPanel';
 import BotonVolver from '@/app/components/BotonVolver';
+
+export const metadata = { title: 'Estadísticas' };
 
 export type CitaStat = {
   fecha: string;
@@ -10,7 +14,7 @@ export type CitaStat = {
   services: { precio: number } | null;
 };
 
-export type BarberoOpcion = { id: string; nombre: string };
+export type BarberoOpcion = { id: string; nombre: string; propio?: boolean };
 
 export default async function EstadisticasPage() {
   // El acceso (solo dueño) lo controla el layout de esta sección
@@ -21,14 +25,14 @@ export default async function EstadisticasPage() {
     .select('fecha, estado, barber_id, precio, services(precio)')
     .order('fecha', { ascending: true });
 
-  const { data: barberos } = await supabase
-    .from('barbers')
-    .select('id, nombre')
-    .eq('activo', true)
-    .order('nombre');
+  // El dueño ve a todos los barberos, con el suyo primero y seleccionado por defecto
+  const sesion = await crearClienteServidor();
+  const {
+    data: { user },
+  } = await sesion.auth.getUser();
 
   const listaCitas = (citas ?? []) as unknown as CitaStat[];
-  const listaBarberos = (barberos ?? []) as BarberoOpcion[];
+  const listaBarberos: BarberoOpcion[] = user ? await barberosPermitidos(user) : [];
 
   return (
     <main className="py-8 px-4">

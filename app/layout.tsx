@@ -13,7 +13,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Africa Latina Barbershop",
+  title: {
+    default: "Africa Latina Barbershop",
+    template: "%s · Africa Latina",
+  },
   description: "Agenda tu cita - Cortes americanos y todos los estilos",
 };
 

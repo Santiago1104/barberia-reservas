@@ -2,6 +2,8 @@ import { crearClienteServidor } from '@/lib/supabase-server';
 import CambiarClaveForm from './CambiarClaveForm';
 import BotonVolver from '@/app/components/BotonVolver';
 
+export const metadata = { title: 'Mi cuenta' };
+
 export const dynamic = 'force-dynamic';
 
 export default async function CuentaPage() {
@@ -17,7 +19,7 @@ export default async function CuentaPage() {
         <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-5 mb-2">
           Mi cuenta
         </h1>
-        <p className="text-neutral-500 text-sm mb-6">{user?.email}</p>
+        <p className="text-neutral-400 text-sm mb-6">{user?.email}</p>
         <h2 className="text-neutral-200 mb-3">Cambiar contraseña</h2>
         <CambiarClaveForm />
       </div>

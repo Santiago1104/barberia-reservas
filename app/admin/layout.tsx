@@ -3,6 +3,7 @@ import { crearClienteServidor } from '@/lib/supabase-server';
 import { esAdmin } from '@/lib/seguridad';
 import AdminNav, { type EnlaceAdmin } from './AdminNav';
 import BotonSalir from './BotonSalir';
+import FeedbackProvider from '@/app/components/Feedback';
 
 // Marco común del panel: cabecera fija con navegación, usuario y salida
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
 
   return (
+    <FeedbackProvider>
     <div className="min-h-screen bg-neutral-950 text-white">
+      <a
+        href="#contenido"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-amber-400 focus:text-neutral-950"
+      >
+        Saltar al contenido
+      </a>
       <header className="sticky top-0 z-30 border-b border-neutral-800 bg-neutral-950/90 backdrop-blur">
         <div className="max-w-2xl mx-auto px-4 pt-3">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -48,7 +56,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <AdminNav enlaces={enlaces} />
         </div>
       </header>
-      {children}
+      <div id="contenido">{children}</div>
     </div>
+    </FeedbackProvider>
   );
 }

@@ -16,7 +16,7 @@ export default function BotonSalir() {
   return (
     <button
       onClick={cerrarSesion}
-      className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-red-500 hover:text-red-400 transition"
+      className="text-sm min-h-10 px-4 rounded-full inline-flex items-center justify-center presionable border border-neutral-700 text-neutral-300 hover:border-red-500 hover:text-red-400 transition"
     >
       Cerrar sesión
     </button>

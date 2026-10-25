@@ -5,6 +5,8 @@ import { hoyColombia } from '@/lib/tiempo';
 import DisponibilidadPanel from './DisponibilidadPanel';
 import BotonVolver from '@/app/components/BotonVolver';
 
+export const metadata = { title: 'Disponibilidad' };
+
 export const dynamic = 'force-dynamic';
 
 export default async function DisponibilidadPage() {

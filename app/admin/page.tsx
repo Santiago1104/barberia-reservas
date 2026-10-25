@@ -3,6 +3,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { barberosPermitidos } from '@/lib/permisos';
 import AgendaTabs from './AgendaTabs';
 
+export const metadata = { title: 'Agenda' };
+
 export type Cita = {
   id: string;
   fecha: string;
@@ -18,7 +20,7 @@ export type Cita = {
   services: { nombre: string; precio: number } | null;
 };
 
-export type BarberoOpcion = { id: string; nombre: string };
+export type BarberoOpcion = { id: string; nombre: string; propio?: boolean };
 
 export default async function AdminPage() {
   const supabase = await crearClienteServidor();

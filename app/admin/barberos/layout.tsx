@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { esAdmin } from '@/lib/seguridad';
 
+export const metadata = { title: 'Barberos' };
+
 // Sección exclusiva del dueño
 export default async function SeccionDuenioLayout({ children }: { children: React.ReactNode }) {
   const supabase = await crearClienteServidor();

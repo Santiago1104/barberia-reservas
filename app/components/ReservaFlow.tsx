@@ -325,7 +325,7 @@ export default function ReservaFlow({
             </button>
           </div>
 
-          <p className="text-neutral-500 text-xs mt-6">
+          <p className="text-neutral-400 text-xs mt-6">
             ¿No podrás asistir?{' '}
             <a href={urlCancelar} className="text-red-400 underline hover:text-red-300">
               Cancelar mi cita
@@ -376,14 +376,14 @@ export default function ReservaFlow({
                         ? 'bg-amber-400 border-amber-400 text-neutral-950'
                         : esActual
                         ? 'border-amber-400 text-amber-400 scale-110'
-                        : 'border-neutral-700 text-neutral-500'
+                        : 'border-neutral-700 text-neutral-400'
                     }`}
                   >
                     {p.hecho ? <Palomita /> : i + 1}
                   </span>
                   <span
                     className={`text-[11px] leading-none transition-colors ${
-                      esActual || p.hecho ? 'text-neutral-200' : 'text-neutral-500'
+                      esActual || p.hecho ? 'text-neutral-200' : 'text-neutral-400'
                     }`}
                   >
                     {p.etiqueta}

@@ -3,6 +3,8 @@ import CancelarCliente from './CancelarCliente';
 import { hora12, fechaBonita } from '@/lib/formato';
 import { REGEX_ID } from '@/lib/seguridad';
 
+export const metadata = { title: 'Cancelar cita' };
+
 
 const supabase = supabaseAdmin;
 export const dynamic = 'force-dynamic';

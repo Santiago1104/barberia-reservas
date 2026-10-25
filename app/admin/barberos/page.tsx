@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { crearClienteNavegador } from '@/lib/supabase-client';
 import BotonVolver from '@/app/components/BotonVolver';
+import { useFeedback } from '@/app/components/Feedback';
 
 type Barbero = {
   id: string;
@@ -30,10 +31,10 @@ export default function BarberosPage() {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [clave, setClave] = useState('');
-  const [aviso, setAviso] = useState<string | null>(null);
   const [restableciendo, setRestableciendo] = useState<Barbero | null>(null);
   const [claveNueva, setClaveNueva] = useState('');
 
+  const { avisar, confirmar } = useFeedback();
   const supabase = crearClienteNavegador();
 
   async function cargarBarberos() {
@@ -57,7 +58,6 @@ export default function BarberosPage() {
     setClave('');
     setArchivo(null);
     setError(null);
-    setAviso(null);
     setMostrarForm(true);
   }
 
@@ -67,7 +67,6 @@ export default function BarberosPage() {
     setDescripcion(b.descripcion ?? '');
     setArchivo(null);
     setError(null);
-    setAviso(null);
     setMostrarForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -120,7 +119,7 @@ export default function BarberosPage() {
       setError(ERRORES[data.error] ?? 'No se pudo guardar el barbero.');
       return;
     }
-    setAviso(
+    avisar(
       editandoId
         ? 'Cambios guardados.'
         : `Barbero creado. Puede entrar con ${email.trim().toLowerCase()} y la contraseña que definiste.`
@@ -152,15 +151,18 @@ export default function BarberosPage() {
       );
       return;
     }
-    setAviso(`Contraseña de ${restableciendo.nombre} actualizada.`);
+    avisar(`Contraseña de ${restableciendo.nombre} actualizada.`);
     setRestableciendo(null);
     setClaveNueva('');
   }
 
   async function desactivar(id: string, nombreBarbero: string) {
-    const confirmado = window.confirm(
-      `¿Seguro que quieres desactivar a ${nombreBarbero}? Dejará de aparecer en las reservas y su acceso al panel se bloqueará.`
-    );
+    const confirmado = await confirmar({
+      titulo: `Desactivar a ${nombreBarbero}`,
+      mensaje: 'Dejará de aparecer en las reservas y su acceso al panel se bloqueará.',
+      confirmar: 'Desactivar',
+      peligro: true,
+    });
     if (!confirmado) return;
 
     const res = await fetch('/api/admin/barberos', {
@@ -168,7 +170,12 @@ export default function BarberosPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
-    if (res.ok) cargarBarberos();
+    if (res.ok) {
+      avisar(`${nombreBarbero} fue desactivado.`);
+      cargarBarberos();
+    } else {
+      avisar('No se pudo desactivar. Intenta de nuevo.', 'error');
+    }
   }
 
   return (
@@ -179,15 +186,13 @@ export default function BarberosPage() {
           Barberos
         </h1>
 
-        {aviso && <p className="mb-4 text-amber-400 text-sm">{aviso}</p>}
-
         {restableciendo && (
           <div className="mb-6 flex flex-col gap-3 bg-neutral-900 border border-amber-400 rounded-xl p-4">
             <p className="font-bold text-amber-400">Nueva contraseña para {restableciendo.nombre}</p>
             <input
               type="text"
               autoComplete="off"
-              placeholder="Mín. 10 caracteres, con letras y números"
+              aria-label="Mín. 10 caracteres, con letras y números" placeholder="Mín. 10 caracteres, con letras y números"
               value={claveNueva}
               onChange={(e) => setClaveNueva(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
@@ -224,27 +229,27 @@ export default function BarberosPage() {
         {mostrarForm && (
           <div className="flex flex-col gap-3 mb-6 bg-neutral-900 border border-neutral-800 rounded-xl p-4">
             <input
-              placeholder="Nombre del barbero"
+              aria-label="Nombre del barbero" placeholder="Nombre del barbero"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
             <textarea
-              placeholder="Descripción (ej. Especialista en cortes clásicos)"
+              aria-label="Descripción (ej. Especialista en cortes clásicos)" placeholder="Descripción (ej. Especialista en cortes clásicos)"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={2}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none resize-y"
             />
             {editandoId ? (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-neutral-400">
                 El correo no se puede cambiar. Si quiere otra contraseña, usa «Cambiar clave».
               </p>
             ) : (
               <>
             <input
               type="email"
-              placeholder="Correo del barbero (obligatorio: login y avisos de reservas)"
+              aria-label="Correo del barbero (obligatorio: login y avisos de reservas)" placeholder="Correo del barbero (obligatorio: login y avisos de reservas)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
@@ -252,12 +257,12 @@ export default function BarberosPage() {
             <input
               type="text"
               autoComplete="off"
-              placeholder="Contraseña del barbero (mín. 10, con letras y números)"
+              aria-label="Contraseña del barbero (mín. 10, con letras y números)" placeholder="Contraseña del barbero (mín. 10, con letras y números)"
               value={clave}
               onChange={(e) => setClave(e.target.value)}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-neutral-400">
               Con este correo y contraseña el barbero podrá entrar. Después puede cambiarla desde «Mi cuenta».
             </p>
               </>
@@ -312,7 +317,7 @@ export default function BarberosPage() {
                     <div className="font-bold">{b.nombre}</div>
                     {b.descripcion && <div className="text-sm text-neutral-400">{b.descripcion}</div>}
                     {b.email ? (
-                      <div className="text-xs text-neutral-500 truncate">{b.email}</div>
+                      <div className="text-xs text-neutral-400 truncate">{b.email}</div>
                     ) : (
                       <div className="text-xs text-red-400">Sin correo: no recibirá avisos ni podrá entrar</div>
                     )}
@@ -321,7 +326,7 @@ export default function BarberosPage() {
                 <div className="flex flex-col gap-2 shrink-0">
                   <button
                     onClick={() => abrirEdicion(b)}
-                    className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+                    className="text-sm min-h-10 px-3 rounded-lg inline-flex items-center justify-center border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
                   >
                     Editar
                   </button>
@@ -330,16 +335,15 @@ export default function BarberosPage() {
                       onClick={() => {
                         setRestableciendo(b);
                         setClaveNueva('');
-                        setAviso(null);
-                      }}
-                      className="text-sm px-3 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+                                          }}
+                      className="text-sm min-h-10 px-3 rounded-lg inline-flex items-center justify-center border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
                     >
                       Cambiar clave
                     </button>
                   )}
                   <button
                     onClick={() => desactivar(b.id, b.nombre)}
-                    className="text-sm px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition"
+                    className="text-sm min-h-10 px-3 rounded-lg inline-flex items-center justify-center border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition"
                   >
                     Desactivar
                   </button>

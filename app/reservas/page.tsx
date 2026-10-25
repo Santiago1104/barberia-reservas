@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import ReservaFlow from '../components/ReservaFlow';
+
+export const metadata = { title: 'Reservar cita' };
 export const dynamic = 'force-dynamic';
 
 export default async function ReservasPage() {

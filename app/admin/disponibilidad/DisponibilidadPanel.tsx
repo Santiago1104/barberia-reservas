@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { hora12, fechaBonita } from '@/lib/formato';
+import { useFeedback } from '@/app/components/Feedback';
 
 type Franja = {
   hora: string;
@@ -11,7 +12,7 @@ type Franja = {
   inicio?: boolean;
 };
 
-type Barbero = { id: string; nombre: string };
+type Barbero = { id: string; nombre: string; propio?: boolean };
 
 const estilos: Record<Franja['estado'], string> = {
   libre: 'border-neutral-700 text-white hover:border-amber-400',
@@ -29,12 +30,14 @@ export default function DisponibilidadPanel({
   hoy: string;
   maxFecha: string;
 }) {
-  const [barberoId, setBarberoId] = useState(barberos[0].id);
+  const { avisar, confirmar } = useFeedback();
+  const [barberoId, setBarberoId] = useState(
+    () => (barberos.find((b) => b.propio) ?? barberos[0]).id
+  );
   const [fecha, setFecha] = useState(hoy);
   const [franjas, setFranjas] = useState<Franja[]>([]);
   const [cargadoPara, setCargadoPara] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
-  const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const clave = `${barberoId}|${fecha}|${version}`;
@@ -63,7 +66,6 @@ export default function DisponibilidadPanel({
 
   async function bloquear(horas: string[], cancelarCitas = false) {
     setError(null);
-    setMensaje(null);
     const res = await fetch('/api/admin/bloqueos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,31 +77,34 @@ export default function DisponibilidadPanel({
       const lista = (data.citas as { hora: string; cliente: string }[])
         .map((c) => `• ${hora12(c.hora)} — ${c.cliente}`)
         .join('\n');
-      const ok = window.confirm(
-        `Hay citas reservadas en esas franjas:\n\n${lista}\n\nSi continúas, se cancelarán y se avisará a cada cliente por correo. ¿Continuar?`
-      );
+      const ok = await confirmar({
+        titulo: 'Hay citas en esas franjas',
+        mensaje: `${lista}\n\nSi continúas, se cancelarán y se avisará a cada cliente por correo.`,
+        confirmar: 'Cancelar citas y bloquear',
+        cancelar: 'Dejar como está',
+        peligro: true,
+      });
       if (ok) await bloquear(horas, true);
       return;
     }
     if (!res.ok) {
-      setError('No se pudo bloquear. Intenta de nuevo.');
+      avisar('No se pudo bloquear. Intenta de nuevo.', 'error');
       return;
     }
     if (data.canceladas > 0) {
-      setMensaje(`Bloqueado. Se canceló ${data.canceladas} cita(s) y se avisó a los clientes.`);
+      avisar(`Bloqueado. Se canceló ${data.canceladas} cita(s) y se avisó a los clientes.`);
     }
     cargar();
   }
 
   async function desbloquear(horas: string[]) {
     setError(null);
-    setMensaje(null);
     const res = await fetch('/api/admin/bloqueos', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ barber_id: barberoId, fecha, horas }),
     });
-    if (!res.ok) setError('No se pudo desbloquear. Intenta de nuevo.');
+    if (!res.ok) avisar('No se pudo desbloquear. Intenta de nuevo.', 'error');
     cargar();
   }
 
@@ -125,7 +130,7 @@ export default function DisponibilidadPanel({
           >
             {barberos.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.nombre}
+                {b.nombre}{b.propio ? ' (tú)' : ''}
               </option>
             ))}
           </select>
@@ -142,30 +147,29 @@ export default function DisponibilidadPanel({
           onChange={(e) => e.target.value && setFecha(e.target.value)}
           className="w-full p-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white focus:border-amber-400 focus:outline-none"
         />
-        <p className="text-neutral-500 text-xs mt-1">{fechaBonita(fecha)}</p>
+        <p className="text-neutral-400 text-xs mt-1">{fechaBonita(fecha)}</p>
       </div>
 
-      <p className="text-neutral-500 text-xs mb-3">
+      <p className="text-neutral-400 text-xs mb-3">
         Estas son las mismas horas que ve el cliente. Toca una para bloquearla o liberarla.
       </p>
       <div className="flex gap-2 mb-4 flex-wrap">
         <button
           onClick={() => bloquear(bloqueables)}
           disabled={bloqueables.length === 0}
-          className="text-sm px-4 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition disabled:opacity-40"
+          className="text-sm min-h-10 px-4 rounded-full inline-flex items-center justify-center presionable border border-red-500 text-red-400 hover:bg-red-500 hover:text-white transition disabled:opacity-40"
         >
           Bloquear todo el día
         </button>
         <button
           onClick={() => desbloquear(bloqueadas)}
           disabled={bloqueadas.length === 0}
-          className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition disabled:opacity-40"
+          className="text-sm min-h-10 px-4 rounded-full inline-flex items-center justify-center presionable border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition disabled:opacity-40"
         >
           Desbloquear todo el día
         </button>
       </div>
 
-      {mensaje && <p className="text-amber-400 text-sm mb-3">{mensaje}</p>}
       {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
       {cargando ? (
@@ -182,7 +186,9 @@ export default function DisponibilidadPanel({
               key={f.hora}
               onClick={() => tocar(f)}
               disabled={f.estado === 'pasada'}
-              className={`p-3 rounded-xl border text-left transition ${estilos[f.estado]}`}
+              aria-pressed={f.estado === 'bloqueada'}
+              aria-label={`${hora12(f.hora)} a ${hora12(f.fin)}: ${f.estado}`}
+              className={`presionable p-3 rounded-xl border text-left transition ${estilos[f.estado]}`}
             >
               <div className="font-bold">{hora12(f.hora)}</div>
               <div className="text-[11px] text-neutral-400">hasta {hora12(f.fin)}</div>

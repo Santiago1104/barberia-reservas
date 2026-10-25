@@ -19,7 +19,9 @@ export default function EstadisticasPanel({
   barberos: BarberoOpcion[];
 }) {
   const [periodo, setPeriodo] = useState<Periodo>('semana');
-  const [barberoFiltro, setBarberoFiltro] = useState<string>('todos');
+  const [barberoFiltro, setBarberoFiltro] = useState<string>(
+    () => barberos.find((b) => b.propio)?.id ?? 'todos'
+  );
 
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -78,7 +80,7 @@ export default function EstadisticasPanel({
           <option value="todos">Todos los barberos</option>
           {barberos.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.nombre}
+              {b.nombre}{b.propio ? ' (tú)' : ''}
             </option>
           ))}
         </select>
@@ -90,7 +92,8 @@ export default function EstadisticasPanel({
           <button
             key={p.clave}
             onClick={() => setPeriodo(p.clave)}
-            className={`px-4 py-2 rounded-lg border text-sm transition ${
+            aria-pressed={periodo === p.clave}
+            className={`presionable min-h-10 px-4 rounded-full border text-sm ${
               periodo === p.clave
                 ? 'border-amber-400 bg-amber-400 text-neutral-950 font-bold'
                 : 'border-neutral-700 text-neutral-300 hover:border-neutral-500'
@@ -137,7 +140,7 @@ export default function EstadisticasPanel({
             <Bar dataKey="citas" fill="#d4a437" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
-        <p className="text-neutral-500 text-xs mt-2">* Ingresos estimados según citas confirmadas, no caja real.</p>
+        <p className="text-neutral-400 text-xs mt-2">* Ingresos estimados según citas confirmadas, no caja real.</p>
       </div>
     </div>
   );

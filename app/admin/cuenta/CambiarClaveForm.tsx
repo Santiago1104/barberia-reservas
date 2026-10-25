@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useFeedback } from '@/app/components/Feedback';
 
 const ERRORES: Record<string, string> = {
   clave_actual_incorrecta: 'La contraseña actual no es correcta.',
@@ -13,12 +14,12 @@ const estiloInput =
   'p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none';
 
 export default function CambiarClaveForm() {
+  const { avisar } = useFeedback();
   const [actual, setActual] = useState('');
   const [nueva, setNueva] = useState('');
   const [repetir, setRepetir] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [listo, setListo] = useState(false);
 
   async function guardar() {
     setError(null);
@@ -42,7 +43,7 @@ export default function CambiarClaveForm() {
       setActual('');
       setNueva('');
       setRepetir('');
-      setListo(true);
+      avisar('Contraseña actualizada.');
     } catch {
       setGuardando(false);
       setError('No se pudo conectar. Intenta de nuevo.');
@@ -75,8 +76,11 @@ export default function CambiarClaveForm() {
         onChange={(e) => setRepetir(e.target.value)}
         className={estiloInput}
       />
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      {listo && <p className="text-amber-400 text-sm">Contraseña actualizada.</p>}
+      {error && (
+        <p role="alert" className="text-red-400 text-sm">
+          {error}
+        </p>
+      )}
       <button
         onClick={guardar}
         disabled={guardando || !actual || !nueva || !repetir}
