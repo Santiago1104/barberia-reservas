@@ -1,6 +1,6 @@
 import { crearClienteServidor } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
-import { usuarioAdmin, REGEX_ID } from '@/lib/seguridad';
+import { usuarioAdmin, REGEX_ID, REGEX_EMAIL } from '@/lib/seguridad';
 
 // Crear barbero
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'no_autorizado' }, { status: 401 });
   }
 
-  const { nombre, descripcion, foto_url } = await request.json().catch(() => ({}));
+  const { nombre, descripcion, foto_url, email } = await request.json().catch(() => ({}));
   if (typeof nombre !== 'string' || nombre.trim() === '' || nombre.length > 80) {
     return NextResponse.json({ error: 'nombre_requerido' }, { status: 400 });
   }
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
   const { error } = await supabase.from('barbers').insert({
     nombre: nombre.trim(),
     descripcion: typeof descripcion === 'string' ? descripcion.trim().slice(0, 300) || null : null,
+    email: typeof email === 'string' && REGEX_EMAIL.test(email.trim()) ? email.trim().toLowerCase() : null,
     foto_url: typeof foto_url === 'string' && /^https:\/\//.test(foto_url) ? foto_url : null,
   });
 

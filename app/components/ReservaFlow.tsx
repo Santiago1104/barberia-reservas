@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef  } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { hora12, fechaBonita } from '@/lib/formato';
 import { HORARIO, DIAS_ANTICIPACION } from '@/lib/config-reservas';
 
@@ -164,6 +165,12 @@ export default function ReservaFlow({
           setErrorGuardado('Esa hora acaba de ser reservada por alguien más. Por favor elige otra.');
           setHorasOcupadas((prev) => [...prev, horaElegida]);
           setHoraElegida(null);
+        } else if (resultado.error === 'demasiados_intentos') {
+          setErrorGuardado('Has hecho demasiados intentos. Espera unos minutos e intenta de nuevo.');
+        } else if (resultado.error === 'fecha_invalida') {
+          setErrorGuardado('Esa fecha u hora ya no está disponible. Elige otra.');
+        } else if (resultado.error === 'datos_invalidos') {
+          setErrorGuardado('Revisa tus datos (nombre, teléfono y correo) e intenta de nuevo.');
         } else {
           setErrorGuardado('Ocurrió un error al guardar. Intenta de nuevo.');
         }
@@ -177,27 +184,96 @@ export default function ReservaFlow({
     }
   }
 
+  function reiniciar() {
+    setBarberoElegido(null);
+    setServicioElegido(null);
+    setDiaElegido(null);
+    setHoraElegida(null);
+    setHorasOcupadas([]);
+    setNombre('');
+    setTelefono('');
+    setEmail('');
+    setErrorGuardado(null);
+    setReservaHecha(null);
+    window.scrollTo({ top: 0 });
+  }
+
   // PANTALLA DE CONFIRMACIÓN
   if (reservaHecha) {
     const urlCancelar = `${window.location.origin}/cancelar/${reservaHecha.cancelToken}`;
+
+    // Enlace para agregar la cita a Google Calendar (cita de 1 hora, hora de Colombia)
+    const [hh, mm] = horaElegida!.split(':');
+    const inicio = `${diaElegido!.replace(/-/g, '')}T${hh}${mm}00`;
+    const fin = `${diaElegido!.replace(/-/g, '')}T${String(Number(hh) + 1).padStart(2, '0')}${mm}00`;
+    const urlCalendario =
+      'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+      `&text=${encodeURIComponent(`Cita en Africa Latina Barbershop con ${barberoElegido?.nombre}`)}` +
+      `&details=${encodeURIComponent(`Servicio: ${servicioElegido?.nombre}`)}` +
+      `&dates=${inicio}/${fin}&ctz=America/Bogota`;
+
     return (
       <main className="min-h-screen bg-neutral-950 text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-8 text-center">
-          <div className="text-amber-400 text-5xl mb-4">✓</div>
-          <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-2xl font-bold text-amber-400 mb-4">
+          <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-amber-400 text-neutral-950 text-3xl font-bold flex items-center justify-center">
+            ✓
+          </div>
+          <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-2xl font-bold text-amber-400 mb-1">
             ¡Reserva confirmada!
           </h1>
-          <p className="text-neutral-300 mb-2">
-            Tu cita con <strong className="text-white">{barberoElegido?.nombre}</strong> quedó agendada para el {fechaBonita(diaElegido!)} a las {hora12(horaElegida!)}.
+          <p className="text-neutral-400 text-sm mb-6">
+            Enviamos los detalles a <span className="text-neutral-200">{email}</span>
           </p>
-          <p className="text-neutral-400 text-sm mb-6">Servicio: {servicioElegido?.nombre}</p>
-         <p className="text-neutral-300 text-sm mb-6">Enviamos los detalles a tu correo electrónico.</p>
-          <a
-            href={urlCancelar}
-            className="inline-block w-full py-4 rounded-xl border border-red-500 text-red-400 font-bold uppercase tracking-wide hover:bg-red-500 hover:text-white transition"
-          >
-            Cancelar mi cita
-          </a>
+
+          <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 mb-6 text-left">
+            <div className="flex justify-between py-2 border-b border-neutral-800">
+              <span className="text-neutral-400">Barbero</span>
+              <span className="font-bold">{barberoElegido?.nombre}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-neutral-800">
+              <span className="text-neutral-400">Servicio</span>
+              <span className="font-bold">{servicioElegido?.nombre}</span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-neutral-800">
+              <span className="text-neutral-400">Fecha</span>
+              <span className="font-bold text-right">{fechaBonita(diaElegido!)}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-neutral-400">Hora</span>
+              <span className="font-bold">{hora12(horaElegida!)}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/"
+              className="w-full py-4 rounded-xl bg-amber-400 text-neutral-950 font-bold uppercase tracking-wide hover:bg-amber-300 transition"
+            >
+              Volver al inicio
+            </Link>
+            <a
+              href={urlCalendario}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 rounded-xl border border-neutral-700 text-neutral-200 hover:border-amber-400 hover:text-amber-400 transition"
+            >
+              Agregar a mi calendario
+            </a>
+            <button
+              onClick={reiniciar}
+              className="w-full py-3 rounded-xl border border-neutral-700 text-neutral-200 hover:border-amber-400 hover:text-amber-400 transition"
+            >
+              Agendar otra cita
+            </button>
+          </div>
+
+          <p className="text-neutral-500 text-xs mt-6">
+            ¿No podrás asistir?{' '}
+            <a href={urlCancelar} className="text-red-400 underline hover:text-red-300">
+              Cancelar mi cita
+            </a>{' '}
+            (hasta 30 minutos antes).
+          </p>
         </div>
       </main>
     );
@@ -206,7 +282,10 @@ export default function ReservaFlow({
   return (
     <main className="bg-neutral-950 text-white py-10 px-4">
       <div className="max-w-xl mx-auto">
-        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mb-8 text-center">
+        <Link href="/" className="text-neutral-400 hover:text-amber-400 transition text-sm">
+          ← Volver al inicio
+        </Link>
+        <h1 className="font-[family-name:var(--font-oswald)] uppercase tracking-wide text-3xl font-bold text-amber-400 mt-2 mb-8 text-center">
           Reserva tu cita
         </h1>
 

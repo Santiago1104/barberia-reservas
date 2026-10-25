@@ -16,17 +16,21 @@ export async function GET(request: Request) {
   }
 
   // Solo devolvemos las HORAS ocupadas — ningún dato personal
-  const { data, error } = await supabaseAdmin
-    .from('appointments')
-    .select('hora')
-    .eq('barber_id', barberId)
-    .eq('fecha', fecha)
-    .eq('estado', 'confirmada');
+  const [{ data, error }, { data: bloqueos, error: errBloq }] = await Promise.all([
+    supabaseAdmin
+      .from('appointments')
+      .select('hora')
+      .eq('barber_id', barberId)
+      .eq('fecha', fecha)
+      .eq('estado', 'confirmada'),
+    supabaseAdmin.from('bloqueos').select('hora').eq('barber_id', barberId).eq('fecha', fecha),
+  ]);
 
+  if (errBloq) console.error('Error al leer bloqueos:', errBloq);
   if (error) {
     return NextResponse.json({ error: 'error_consulta' }, { status: 500 });
   }
 
-  const horasOcupadas = (data ?? []).map((c) => c.hora.slice(0, 5));
+  const horasOcupadas = [...(data ?? []), ...(bloqueos ?? [])].map((c) => c.hora.slice(0, 5));
   return NextResponse.json({ horasOcupadas });
 }

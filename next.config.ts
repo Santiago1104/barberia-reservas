@@ -10,6 +10,8 @@ const cabecerasSeguridad = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Solo desarrollo: permite abrir el dev server por la IP de la red local (ej. desde el celular)
+  allowedDevOrigins: ['192.168.56.1'],
   async headers() {
     return [
       { source: '/:path*', headers: cabecerasSeguridad },

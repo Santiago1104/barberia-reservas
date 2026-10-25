@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export default async function ReservasPage() {
   const { data: barbers } = await supabase
     .from('barbers')
-    .select('*')
+    .select('id, nombre, descripcion, foto_url, activo')
     .eq('activo', true);
 
   const { data: services } = await supabase

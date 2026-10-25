@@ -67,6 +67,12 @@ export default async function AdminPage() {
             Gestionar servicios
           </Link>
           <Link
+            href="/admin/disponibilidad"
+            className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
+          >
+            Disponibilidad
+          </Link>
+          <Link
             href="/admin/estadisticas"
             className="text-sm px-4 py-2 rounded-lg border border-neutral-700 text-neutral-300 hover:border-amber-400 hover:text-amber-400 transition"
           >

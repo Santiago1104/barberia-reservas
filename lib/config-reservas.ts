@@ -8,3 +8,6 @@ export const DIAS_ANTICIPACION = 3;
 export const MINUTOS_CANCELACION = 30;
 
 export const ZONA_HORARIA = 'America/Bogota';
+
+// Días hacia adelante que un barbero puede bloquear franjas
+export const DIAS_BLOQUEO = 60;

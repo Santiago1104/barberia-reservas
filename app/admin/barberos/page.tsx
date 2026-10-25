@@ -16,6 +16,7 @@ export default function BarberosPage() {
   const [barberos, setBarberos] = useState<Barbero[]>([]);
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [email, setEmail] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +68,7 @@ export default function BarberosPage() {
     const res = await fetch('/api/admin/barberos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, descripcion, foto_url }),
+      body: JSON.stringify({ nombre, descripcion, foto_url, email }),
     });
 
     setCargando(false);
@@ -77,6 +78,7 @@ export default function BarberosPage() {
     }
     setNombre('');
     setDescripcion('');
+    setEmail('');
     setArchivo(null);
     setMostrarForm(false);
     cargarBarberos();
@@ -129,6 +131,13 @@ export default function BarberosPage() {
               onChange={(e) => setDescripcion(e.target.value)}
               rows={2}
               className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none resize-y"
+            />
+            <input
+              type="email"
+              placeholder="Correo con el que inicia sesión (para que gestione su agenda)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 text-white placeholder-neutral-500 focus:border-amber-400 focus:outline-none"
             />
             <label className="text-sm text-neutral-400">
               Foto del barbero:

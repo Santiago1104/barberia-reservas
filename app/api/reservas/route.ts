@@ -40,16 +40,17 @@ export async function POST(request: Request) {
     const email_cliente = limpiar(datos.email_cliente, 254);
 
     // Validación de formato
-    if (
-      !REGEX_ID.test(barber_id) ||
-      !REGEX_ID.test(service_id) ||
-      !REGEX_FECHA.test(fecha) ||
-      !HORARIO.includes(hora) ||
-      nombre_cliente.length < 2 ||
-      !/^[+\d][\d\s-]{6,19}$/.test(telefono_cliente) ||
-      !REGEX_EMAIL.test(email_cliente)
-    ) {
-      return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 });
+    const campos: string[] = [];
+    if (!REGEX_ID.test(barber_id)) campos.push('barber_id');
+    if (!REGEX_ID.test(service_id)) campos.push('service_id');
+    if (!REGEX_FECHA.test(fecha)) campos.push('fecha');
+    if (!HORARIO.includes(hora)) campos.push('hora');
+    if (nombre_cliente.length < 2) campos.push('nombre');
+    if (!/^[+\d][\d\s().-]{6,19}$/.test(telefono_cliente)) campos.push('telefono');
+    if (!REGEX_EMAIL.test(email_cliente)) campos.push('email');
+    if (campos.length > 0) {
+      console.warn('Reserva rechazada, campos inválidos:', campos);
+      return NextResponse.json({ error: 'datos_invalidos', campos }, { status: 400 });
     }
 
     // Fecha dentro de la ventana permitida (hora de Colombia) y no pasada
@@ -66,7 +67,20 @@ export async function POST(request: Request) {
       supabase.from('services').select('nombre').eq('id', service_id).eq('activo', true).maybeSingle(),
     ]);
     if (!barbero || !servicio) {
+      console.warn('Reserva rechazada: barbero o servicio no encontrado/activo', { barber_id, service_id });
       return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 });
+    }
+
+    // Franja bloqueada por el barbero
+    const { data: bloqueada } = await supabase
+      .from('bloqueos')
+      .select('id')
+      .eq('barber_id', barber_id)
+      .eq('fecha', fecha)
+      .eq('hora', hora)
+      .maybeSingle();
+    if (bloqueada) {
+      return NextResponse.json({ error: 'slot_ocupado' }, { status: 409 });
     }
 
     // 1. Guardar la reserva
@@ -86,7 +100,7 @@ export async function POST(request: Request) {
 
     if (error) {
       // Slot ya ocupado
-      if (error.code === '23505') {
+      if (error.code === '23505' || error.message?.includes('franja_bloqueada')) {
         return NextResponse.json({ error: 'slot_ocupado' }, { status: 409 });
       }
       console.error('Error al guardar:', error);

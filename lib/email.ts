@@ -52,3 +52,25 @@ export async function enviarCancelacion(datos: {
     console.error('No se pudo enviar el correo de cancelación:', err);
   }
 }
+
+// El barbero bloqueó la franja de una cita ya reservada
+export async function enviarCancelacionPorBarberia(datos: {
+  emailCliente: string;
+  nombreCliente: string;
+  barbero: string;
+  fecha: string;
+  hora: string;
+  urlReservar: string;
+}) {
+  try {
+    const contenido = `<h2 style="color:#ffffff;font-size:18px;margin:0 0 16px">Tu cita fue cancelada</h2><p style="color:#ddd;margin:0 0 16px">Hola ${e(datos.nombreCliente)}, lamentamos informarte que ${e(datos.barbero)} no podrá atenderte el ${e(datos.fecha)} a las ${e(datos.hora)}, por lo que tu cita fue cancelada.</p><p style="color:#ddd;margin:0 0 24px">Pedimos disculpas por el inconveniente. Puedes elegir otro horario cuando quieras:</p><a href="${e(datos.urlReservar)}" style="display:block;background:#d4a437;color:#1a1a1a;padding:14px;border-radius:8px;text-align:center;text-decoration:none;font-weight:bold">Agendar una nueva cita</a>`;
+    await resend.emails.send({
+      from: REMITENTE,
+      to: datos.emailCliente,
+      subject: 'Tu cita fue cancelada - Africa Latina Barbershop',
+      html: plantilla(contenido),
+    });
+  } catch (err) {
+    console.error('No se pudo enviar el correo de cancelación por barbería:', err);
+  }
+}
